@@ -1,25 +1,46 @@
 package org.archivarium.impl;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.archivarium.Score;
 import org.archivarium.ScoreProviderException;
+import org.junit.Before;
+import org.junit.Test;
 
-public class EmbeddedH2ScoreProviderTest extends TestCase {
-	@Override
-	protected void setUp() throws Exception {
-		super.setUp();
+public class H2ScoreProviderTest {
+	@Before
+	public void setUp() throws Exception {
+		String url = "jdbc:h2:file:" + getDatabase("scores");
+		Connection connection = DriverManager.getConnection(url);
+		Statement statement = connection.createStatement();
 
-		String url = H2ScoreProvider.URL_PREFIX + getDatabase("scores");
-		H2ScoreProvider.executeScript(
-				getClass().getResourceAsStream("init_db.sql"), url);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				getClass().getResourceAsStream("init_db.sql")));
+		String line = reader.readLine();
+		while (line != null) {
+			statement.execute(line);
+			line = reader.readLine();
+		}
+
+		statement.close();
+		connection.close();
 	}
 
-	public void testCreateProvider() throws Exception {
+	@Test
+	public void nullDatabase() throws Exception {
 		// null database
 		try {
 			new H2ScoreProvider(null);
@@ -28,42 +49,37 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		}
 	}
 
-	public void testAlreadyExistsDatabase() throws Exception {
-		assertFalse(H2ScoreProvider.alreadyExistsDB(null));
-		assertFalse(H2ScoreProvider.alreadyExistsDB(File
-				.createTempFile("archivarium", "").getAbsolutePath()));
-		assertTrue(H2ScoreProvider
-				.alreadyExistsDB(getDatabase("scores")));
-		assertTrue(H2ScoreProvider
-				.alreadyExistsDB(getDatabase("wrong_schema")));
-	}
-
-	public void testInitializeDB() throws Exception {
+	@Test
+	public void invalidDatabase() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(
+				getDatabase("wrong_schema"));
 		try {
-			H2ScoreProvider.initializeDB(getDatabase("scores"));
+			provider.getScores();
 			fail();
 		} catch (ScoreProviderException e) {
+			// do nothing
 		}
-
-		String database = File.createTempFile("archivarium", "")
-				.getAbsolutePath();
-		H2ScoreProvider.initializeDB(database);
-
-		// Check
-		H2ScoreProvider provider = new H2ScoreProvider(database);
-		DefaultScore score = new DefaultScore();
-		score.setName("Name");
-		List<String> instruments = new ArrayList<String>();
-		instruments.add("Guitar");
-		score.setInstruments(instruments);
-		provider.addScore(score);
-		assertEquals(1, provider.getScores().size());
-		assertEquals(1, provider.getScores().get(0).getInstruments().size());
 	}
 
-	public void testGetScores() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void nonExistingDatabase() throws Exception {
+		File file = File.createTempFile("archivarium", "");
+		file.delete();
+
+		String path = file.getAbsolutePath();
+		File dbFile = new File(path + ".h2.db");
+		assertFalse(dbFile.exists());
+		H2ScoreProvider provider = new H2ScoreProvider(path);
+		assertTrue(dbFile.exists());
+		assertEquals(0, provider.getScores().size());
+
+		file.delete();
+		dbFile.delete();
+	}
+
+	@Test
+	public void getScores() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		List<Score> scores = provider.getScores();
 		assertEquals(2, scores.size());
 
@@ -83,9 +99,16 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		assertNull(score.getGenre());
 	}
 
-	public void testAddScore() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void getScoreById() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
+		Score score = provider.getScoreById(0);
+		assertEquals("Score 1", score.getName());
+	}
+
+	@Test
+	public void addScore() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		List<String> instruments = new ArrayList<String>();
 		instruments.add("Guitar");
 		DefaultScore score = new DefaultScore();
@@ -108,9 +131,9 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		provider.addScore(score);
 	}
 
-	public void testModifyScore() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void modifyScore() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		Score score = provider.getScores().get(0);
 		score.setDescription(null);
 		score.setName("Name changed");
@@ -120,35 +143,35 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		assertEquals(score, provider.getScores().get(0));
 	}
 
-	public void testDeleteScore() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void deleteScore() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		List<Score> scoresPrev = provider.getScores();
 		provider.deleteScore(scoresPrev.get(0));
 		List<Score> scoresAfter = provider.getScores();
 		assertEquals(scoresPrev.size() - 1, scoresAfter.size());
 	}
 
-	public void testSearchStrict() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void searchStrict() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 
 		DefaultScore model = new DefaultScore();
 		model.setName("Score 1");
-		List<Score> scores = provider.doSearchStrict(model);
+		List<Score> scores = provider.search(model, true);
 		assertEquals(1, scores.size());
 		assertEquals("Score 1", scores.get(0).getName());
 
 		model = new DefaultScore();
 		model.setName("Score ");
-		scores = provider.doSearchStrict(model);
+		scores = provider.search(model, true);
 		assertEquals(0, scores.size());
 
 		model = new DefaultScore();
 		List<String> instruments = new ArrayList<String>();
 		instruments.add("Violin");
 		model.setInstruments(instruments);
-		scores = provider.doSearchStrict(model);
+		scores = provider.search(model, true);
 		assertEquals(1, scores.size());
 		assertEquals("Score 1", scores.get(0).getName());
 
@@ -157,24 +180,24 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		instruments.add("Violin");
 		instruments.add("Piano");
 		model.setInstruments(instruments);
-		scores = provider.doSearchStrict(model);
+		scores = provider.search(model, true);
 		assertEquals(0, scores.size());
 	}
 
-	public void testSearchNotStrict() throws Exception {
-		H2ScoreProvider provider = new H2ScoreProvider(
-				getDatabase("scores"));
+	@Test
+	public void searchNotStrict() throws Exception {
+		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 
 		DefaultScore model = new DefaultScore();
 		model.setName("Score 1");
-		List<Score> scores = provider.doSearchNotStrict(model);
+		List<Score> scores = provider.search(model, false);
 		assertEquals(2, scores.size());
 		assertEquals("Score 1", scores.get(0).getName());
 		assertEquals("Score 2", scores.get(1).getName());
 
 		model = new DefaultScore();
 		model.setEdition("1992 editn");
-		scores = provider.doSearchNotStrict(model);
+		scores = provider.search(model, false);
 		assertEquals(1, scores.size());
 		assertEquals("Score 2", scores.get(0).getName());
 
@@ -182,7 +205,7 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		List<String> instruments = new ArrayList<String>();
 		instruments.add("Viol");
 		model.setInstruments(instruments);
-		scores = provider.doSearchNotStrict(model);
+		scores = provider.search(model, false);
 		assertEquals(1, scores.size());
 		assertEquals("Score 1", scores.get(0).getName());
 
@@ -191,7 +214,7 @@ public class EmbeddedH2ScoreProviderTest extends TestCase {
 		instruments.add("Violin");
 		instruments.add("Piano");
 		model.setInstruments(instruments);
-		scores = provider.doSearchNotStrict(model);
+		scores = provider.search(model, false);
 		assertEquals(0, scores.size());
 	}
 

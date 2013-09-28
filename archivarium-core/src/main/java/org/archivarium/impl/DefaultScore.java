@@ -147,7 +147,7 @@ public class DefaultScore implements Score {
 			checkField(author, score.getAuthor());
 			checkField(description, score.getDescription());
 			checkField(edition, score.getEdition());
-			checkField(url.toString(), score.getURL().toString());
+			checkField(url, score.getURL());
 			checkField(format, score.getFormat());
 			checkField(location, score.getLocation());
 			checkField(genre, score.getGenre());
@@ -161,8 +161,8 @@ public class DefaultScore implements Score {
 			} else if (instruments.size() != score.getInstruments().size()) {
 				return false;
 			}
-		} else if (score.getInstruments() != null) {
-			return false;
+		} else {
+			return score.getInstruments() == null;
 		}
 
 		for (int i = 0; i < instruments.size(); i++) {

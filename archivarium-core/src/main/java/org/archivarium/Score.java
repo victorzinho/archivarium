@@ -3,20 +3,6 @@ package org.archivarium;
 import java.util.List;
 
 public interface Score {
-	enum Field {
-		ID, NAME, AUTHOR
-	}
-	int ID = 0;
-	int NAME = 1;
-	int AUTHOR = 2;
-	int DESCRIPTION = 3;
-	int INSTRUMENTS = 4;
-	int EDITION = 5;
-	int URL = 6;
-	int FORMAT = 7;
-	int LOCATION = 8;
-	int GENRE = 9;
-
 	int getId();
 
 	String getName();
