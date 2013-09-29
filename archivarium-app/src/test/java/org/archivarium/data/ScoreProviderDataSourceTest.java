@@ -1,73 +1,54 @@
 package org.archivarium.data;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import geomatico.events.EventBus;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.ImageIcon;
 
-import junit.framework.TestCase;
-
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
-import org.archivarium.ScoreProviderException;
+import org.archivarium.inject.ScoreDataFactory;
 import org.archivarium.ui.data.Row;
-import org.archivarium.ui.data.TableDataException;
+import org.junit.Test;
 
-public class ScoreProviderDataSourceTest extends TestCase {
+import com.google.inject.Inject;
 
-	@Override
-	protected void tearDown() throws Exception {
-		super.tearDown();
-		EventBus.getInstance().removeAllHandlers();
-	}
+public class ScoreProviderDataSourceTest extends AbstractArchivariumTest {
+	@Inject
+	private ScoreDataFactory factory;
 
-	public void testColumnNames() throws Exception {
-		ScoreProvider provider = mock(ScoreProvider.class);
-
-		ScoreProviderDataSource handler = new ScoreProviderDataSource(provider);
-		int n = handler.getColumnCount();
+	@Test
+	public void columnNames() throws Exception {
+		ScoreProviderDataSource source = factory
+				.createSource(mock(ScoreProvider.class));
+		int n = source.getColumnCount();
 
 		try {
-			handler.getColumnName(-1);
+			source.getColumnName(-1);
 			fail();
 		} catch (IllegalArgumentException e) {
 			// do nothing
 		}
 
 		for (int i = 0; i < n; i++) {
-			handler.getColumnName(i);
+			source.getColumnName(i);
 		}
 
 		try {
-			handler.getColumnName(n);
+			source.getColumnName(n);
 			fail();
 		} catch (IllegalArgumentException e) {
 			// do nothing
 		}
 	}
 
-	public void testGetRowException() throws Exception {
-		ScoreProvider provider = mock(ScoreProvider.class);
-		when(provider.getScoreById(anyInt())).thenThrow(
-				new ScoreProviderException());
-
-		ScoreProviderDataSource handler = new ScoreProviderDataSource(provider);
-		try {
-			handler.getRowById(0);
-			fail();
-		} catch (TableDataException e) {
-			// do nothing
-		}
-	}
-
-	public void testGetRow() throws Exception {
+	@Test
+	public void getRow() throws Exception {
 		// Score values
 		int id = 42;
 		String name = "Score 1";
@@ -92,106 +73,49 @@ public class ScoreProviderDataSourceTest extends TestCase {
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
 		// Get row
-		ScoreProviderDataSource handler = new ScoreProviderDataSource(provider);
-		Row row = handler.getRowById(id);
+		ScoreProviderDataSource source = factory.createSource(provider);
+		Row row = source.getRowById(id);
 
 		// Test
-		assertEquals(name,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_NAME));
-		assertEquals(author,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_AUTHOR));
+		assertEquals(name, row.getData(ScoreRow.COLUMN_INDEX_NAME));
+		assertEquals(author, row.getData(ScoreRow.COLUMN_INDEX_AUTHOR));
 		assertEquals(description,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_DESCRIPTION));
-		assertEquals(edition,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_EDITION));
-		assertEquals(location,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_LOCATION));
-		assertEquals(genre,
-				row.getData(ScoreProviderDataSource.COLUMN_INDEX_GENRE));
+				row.getData(ScoreRow.COLUMN_INDEX_DESCRIPTION));
+		assertEquals(edition, row.getData(ScoreRow.COLUMN_INDEX_EDITION));
+		assertEquals(location, row.getData(ScoreRow.COLUMN_INDEX_LOCATION));
+		assertEquals(genre, row.getData(ScoreRow.COLUMN_INDEX_GENRE));
 		assertEquals(id, row.getId());
 	}
 
-	public void testGetRowNullURL() throws Exception {
+	@Test
+	public void getRowNullURL() throws Exception {
 		ScoreProviderDataSource handler = mockScoreProvider(null, "pdf");
 		Row row = handler.getRowById(0);
-		assertNull(row.getData(ScoreProviderDataSource.COLUMN_INDEX_FORMAT));
+		assertNull(row.getData(ScoreRow.COLUMN_INDEX_FORMAT));
 	}
 
-	public void testGetRowNullFormat() throws Exception {
+	@Test
+	public void getRowNullFormat() throws Exception {
 		ScoreProviderDataSource handler = mockScoreProvider("/tmp/score.pdf",
 				null);
 		Row row = handler.getRowById(0);
-		assertNull(row.getData(ScoreProviderDataSource.COLUMN_INDEX_FORMAT));
+		assertNull(row.getData(ScoreRow.COLUMN_INDEX_FORMAT));
 	}
 
-	public void testGetRowUnrecognizedFormat() throws Exception {
+	@Test
+	public void getRowUnrecognizedFormat() throws Exception {
 		ScoreProviderDataSource handler = mockScoreProvider("/tmp/score",
 				"unknown_format");
 		Row row = handler.getRowById(0);
-		assertTrue(row.getData(ScoreProviderDataSource.COLUMN_INDEX_FORMAT) instanceof ImageIcon);
+		assertTrue(row.getData(ScoreRow.COLUMN_INDEX_FORMAT) instanceof ImageIcon);
 	}
 
-	public void testGetRowRecognizedFormat() throws Exception {
+	@Test
+	public void getRowRecognizedFormat() throws Exception {
 		ScoreProviderDataSource handler = mockScoreProvider("/tmp/score.sib",
 				"sib");
 		Row row = handler.getRowById(0);
-		assertTrue(row.getData(ScoreProviderDataSource.COLUMN_INDEX_FORMAT) instanceof ImageIcon);
-	}
-
-	public void testGetRowsNoCriteria() throws Exception {
-		List<Score> scores = new ArrayList<Score>();
-		scores.add(mockScore(0, "Score 1", "Author"));
-		scores.add(mockScore(1, "Score 2", "Author"));
-		scores.add(mockScore(2, "Score 3", "Another author"));
-
-		ScoreProvider provider = mock(ScoreProvider.class);
-		when(provider.getScores()).thenReturn(scores);
-
-		ScoreProviderDataSource handler = new ScoreProviderDataSource(provider);
-		checkRows(handler.getRows(null), scores);
-	}
-
-	public void testGetRowsInvalidCriteria() throws Exception {
-		List<Score> scores = new ArrayList<Score>();
-		ScoreProvider provider = mock(ScoreProvider.class);
-		when(provider.getScores()).thenReturn(scores);
-
-		try {
-			new ScoreProviderDataSource(provider)
-					.getRows(new String[] { "Score" });
-			fail();
-		} catch (IllegalArgumentException e) {
-			// do nothing
-		}
-	}
-
-	public void testGetRowsWithCriteria() throws Exception {
-		List<Score> scores = new ArrayList<Score>();
-		scores.add(mockScore(0, "Score 1", "Author"));
-		scores.add(mockScore(1, "Score 2", "Author"));
-		scores.add(mockScore(2, "Score 3", "Another author"));
-
-		ScoreProvider provider = mock(ScoreProvider.class);
-		when(provider.search(any(Score.class), anyBoolean()))
-				.thenReturn(scores);
-
-		ScoreProviderDataSource handler = new ScoreProviderDataSource(provider);
-		Row[] rows = handler.getRows(new String[] { "format", "name", "author",
-				"description", "instruments", "edition", "location", "genre" });
-
-		checkRows(rows, scores);
-	}
-
-	public void testGetRowsException() throws Exception {
-		ScoreProvider provider = mock(ScoreProvider.class);
-		when(provider.getScores()).thenThrow(new ScoreProviderException());
-
-		try {
-			new ScoreProviderDataSource(provider).getRows(null);
-			fail();
-		} catch (TableDataException e) {
-			// do nothing
-		}
+		assertTrue(row.getData(ScoreRow.COLUMN_INDEX_FORMAT) instanceof ImageIcon);
 	}
 
 	private ScoreProviderDataSource mockScoreProvider(String url, String format)
@@ -204,30 +128,6 @@ public class ScoreProviderDataSourceTest extends TestCase {
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
-		return new ScoreProviderDataSource(provider);
-	}
-
-	private Score mockScore(int id, String name, String author) {
-		Score score = mock(Score.class);
-		when(score.getId()).thenReturn(id);
-		when(score.getName()).thenReturn(name);
-		when(score.getAuthor()).thenReturn(author);
-
-		return score;
-	}
-
-	private void checkRows(Row[] rows, List<Score> scores) {
-		assertEquals(scores.size(), rows.length);
-
-		for (int i = 0; i < rows.length; i++) {
-			int rowId = rows[i].getId();
-			Object rowName = rows[i]
-					.getData(ScoreProviderDataSource.COLUMN_INDEX_NAME);
-			Object rowAuthor = rows[i]
-					.getData(ScoreProviderDataSource.COLUMN_INDEX_AUTHOR);
-			assertEquals(scores.get(i).getId(), rowId);
-			assertEquals(scores.get(i).getName(), rowName);
-			assertEquals(scores.get(i).getAuthor(), rowAuthor);
-		}
+		return factory.createSource(provider);
 	}
 }

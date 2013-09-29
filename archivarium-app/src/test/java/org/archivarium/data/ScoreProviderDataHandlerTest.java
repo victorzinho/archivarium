@@ -1,5 +1,6 @@
 package org.archivarium.data;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.same;
@@ -14,71 +15,77 @@ import geomatico.events.EventBus;
 import java.io.File;
 import java.net.URI;
 
-import junit.framework.TestCase;
+import javax.inject.Inject;
 
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
 import org.archivarium.events.ScoreDeletedEvent;
 import org.archivarium.events.ScoreDeletedHandler;
-import org.archivarium.ui.data.TableDataException;
+import org.archivarium.inject.ScoreDataFactory;
+import org.archivarium.ui.data.DataHandlerException;
+import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-public class ScoreProviderDataHandlerTest extends TestCase {
+public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
+	@Inject
+	private ScoreDataFactory factory;
 
-	@Override
-	protected void tearDown() throws Exception {
-		super.tearDown();
-		EventBus.getInstance().removeAllHandlers();
-	}
+	@Inject
+	private EventBus bus;
 
-	public void testOpenProviderException() throws Exception {
+	@Test
+	public void openProviderException() throws Exception {
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenThrow(
-				new ScoreProviderException());
+				mock(ScoreProviderException.class));
 
 		try {
-			new ScoreProviderDataHandler(provider).open(0);
+			factory.createHandler(provider).open(0);
 			fail();
-		} catch (TableDataException e) {
+		} catch (DataHandlerException e) {
 			// do nothing
 		}
 	}
 
-	public void testOpenNull() throws Exception {
+	@Test
+	public void openNull() throws Exception {
 		try {
 			mockHandlerForOpen(null).open(0);
 			fail();
-		} catch (TableDataException e) {
+		} catch (DataHandlerException e) {
 			// do nothing
 		}
 	}
 
-	public void testOpenNonExisting() throws Exception {
+	@Test
+	public void openNonExisting() throws Exception {
 		try {
 			mockHandlerForOpen("file:///tmp/non_existing").open(0);
 			fail();
-		} catch (TableDataException e) {
+		} catch (DataHandlerException e) {
 			// do nothing
 		}
 	}
 
-	public void testOpenRelativePath() throws Exception {
+	@Test
+	public void openRelativePath() throws Exception {
 		File file = new File("test_file.archivarium");
 		file.createNewFile();
 
 		try {
 			mockHandlerForOpen(file.getPath()).open(0);
 			fail();
-		} catch (TableDataException e) {
+		} catch (DataHandlerException e) {
 			// do nothing
 		}
 
 		file.delete();
 	}
 
-	public void testOpenAbsolutePath() throws Exception {
+	@Test
+	public void openAbsolutePath() throws Exception {
 		File file = File.createTempFile("archivarium", ".txt");
 
 		ScoreProviderDataHandler handler = mockHandlerForOpen(file
@@ -96,7 +103,8 @@ public class ScoreProviderDataHandlerTest extends TestCase {
 		file.delete();
 	}
 
-	public void testOpenValidURI() throws Exception {
+	@Test
+	public void openValidURI() throws Exception {
 		File file = File.createTempFile("archivarium", ".txt");
 
 		ScoreProviderDataHandler handler = mockHandlerForOpen("file://"
@@ -115,35 +123,35 @@ public class ScoreProviderDataHandlerTest extends TestCase {
 		file.delete();
 	}
 
-	public void testRemoveNonExisting() throws Exception {
+	@Test
+	public void removeNonExisting() throws Exception {
 		ScoreDeletedHandler eventHandler = mock(ScoreDeletedHandler.class);
-		EventBus.getInstance()
-				.addHandler(ScoreDeletedEvent.class, eventHandler);
+		bus.addHandler(ScoreDeletedEvent.class, eventHandler);
 
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenThrow(
-				new ScoreProviderException());
+				mock(ScoreProviderException.class));
 
 		try {
-			new ScoreProviderDataHandler(provider).remove(0);
+			factory.createHandler(provider).delete(0);
 			fail();
-		} catch (TableDataException e) {
+		} catch (DataHandlerException e) {
 			// do nothing
 		}
 
 		verify(eventHandler, never()).deleted(any(Score.class));
 	}
 
-	public void testRemove() throws Exception {
+	@Test
+	public void testremove() throws Exception {
 		ScoreDeletedHandler eventHandler = mock(ScoreDeletedHandler.class);
-		EventBus.getInstance()
-				.addHandler(ScoreDeletedEvent.class, eventHandler);
+		bus.addHandler(ScoreDeletedEvent.class, eventHandler);
 
 		Score score = mock(Score.class);
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
-		new ScoreProviderDataHandler(provider).remove(0);
+		factory.createHandler(provider).delete(0);
 
 		verify(eventHandler).deleted(same(score));
 	}
@@ -156,6 +164,6 @@ public class ScoreProviderDataHandlerTest extends TestCase {
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
-		return spy(new ScoreProviderDataHandler(provider));
+		return spy(factory.createHandler(provider));
 	}
 }

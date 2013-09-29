@@ -12,44 +12,60 @@ import java.net.URL;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
+import org.archivarium.events.ScoreAddedEvent;
 import org.archivarium.events.ScoreDeletedEvent;
-import org.archivarium.ui.data.TableDataException;
+import org.archivarium.ui.ScoreEditionPanel;
 import org.archivarium.ui.data.DataHandler;
+import org.archivarium.ui.data.DataHandlerException;
+import org.archivarium.ui.data.RowEditionPanel;
 
-public class ScoreProviderDataHandler implements DataHandler {
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
+public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
+	private RowEditionPanel<ScoreRow> editPanel;
+
 	private ScoreProvider provider;
 
-	public ScoreProviderDataHandler(ScoreProvider provider) {
+	@Inject
+	public ScoreProviderDataHandler(@Assisted ScoreProvider provider) {
 		this.provider = provider;
 	}
 
+	@Inject
+	private EventBus eventBus;
+
 	@Override
-	public void remove(int id) throws TableDataException {
+	public void delete(int id) throws DataHandlerException {
 		try {
 			Score score = getScore(id);
 			provider.deleteScore(score);
-			EventBus.getInstance().fireEvent(new ScoreDeletedEvent(score));
+			eventBus.fireEvent(new ScoreDeletedEvent(score));
 		} catch (ScoreProviderException e) {
-			throw new TableDataException(e);
+			throw new DataHandlerException(e);
 		}
 	}
 
 	@Override
-	public void update(int id) {
-		// TODO Auto-generated method stub
+	public void update(ScoreRow row) throws DataHandlerException {
+		try {
+			provider.modifyScore(row.getScore());
+		} catch (ScoreProviderException e) {
+			throw new DataHandlerException(e);
+		}
 	}
 
 	@Override
-	public void open(int id) throws TableDataException {
+	public void open(int id) throws DataHandlerException {
 		String url;
 		try {
 			url = getScore(id).getURL();
 		} catch (ScoreProviderException e) {
-			throw new TableDataException(e);
+			throw new DataHandlerException(e);
 		}
 
 		if (url == null) {
-			throw new TableDataException("URL cannot be null");
+			throw new DataHandlerException("URL cannot be null");
 		}
 
 		URI uri;
@@ -60,13 +76,13 @@ public class ScoreProviderDataHandler implements DataHandler {
 				uri = new URI("file://" + url);
 			}
 		} catch (URISyntaxException e) {
-			throw new TableDataException(e);
+			throw new DataHandlerException(e);
 		}
 
 		try {
 			doOpen(uri);
 		} catch (IOException e) {
-			throw new TableDataException(e);
+			throw new DataHandlerException(e);
 		}
 	}
 
@@ -76,5 +92,23 @@ public class ScoreProviderDataHandler implements DataHandler {
 
 	private Score getScore(int id) throws ScoreProviderException {
 		return provider.getScoreById(id);
+	}
+
+	@Override
+	public void add(ScoreRow row) throws DataHandlerException {
+		try {
+			Score score = row.getScore();
+			provider.addScore(score);
+			eventBus.fireEvent(new ScoreAddedEvent(score));
+		} catch (ScoreProviderException e) {
+			throw new DataHandlerException(e);
+		}
+	}
+
+	public RowEditionPanel<ScoreRow> getRowEditionPanel() {
+		if (editPanel == null) {
+			this.editPanel = new ScoreEditionPanel();
+		}
+		return editPanel;
 	}
 }
