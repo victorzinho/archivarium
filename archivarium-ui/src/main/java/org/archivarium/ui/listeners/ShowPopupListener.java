@@ -12,6 +12,7 @@ import javax.swing.JTable;
 
 import org.archivarium.ui.UIFactory;
 import org.archivarium.ui.data.DataHandlerException;
+import org.archivarium.ui.data.DataSource;
 import org.archivarium.ui.data.Row;
 import org.archivarium.ui.models.MainTableModel;
 import org.archivarium.ui.panels.ArchivariumMainPanel;
@@ -55,15 +56,16 @@ public class ShowPopupListener<T extends Row> extends MouseAdapter {
 				&& e.getButton() == MouseEvent.BUTTON1) {
 			int id = (Integer) table.getValueAt(rowIndex,
 					MainTableModel.COLUMN_ID);
-			Row row = parent.getLocalDataPanel().getDataSource().getRowById(id);
+			DataSource<T> source = parent.getLocalDataPanel().getDataSource();
 
-			if (row != null && row.isOpenable()) {
-				try {
+			try {
+				Row row = source.getRowById(id);
+				if (row != null && row.isOpenable()) {
 					parent.getDataHandler().open(row.getId());
-				} catch (DataHandlerException exception) {
-					eventBus.fireEvent(new ExceptionEvent(exception
-							.getMessage(), exception));
 				}
+			} catch (DataHandlerException exception) {
+				eventBus.fireEvent(new ExceptionEvent(exception.getMessage(),
+						exception));
 			}
 		}
 	}

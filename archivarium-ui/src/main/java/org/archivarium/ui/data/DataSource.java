@@ -36,7 +36,7 @@ public interface DataSource<T extends Row> {
 	 * @return The row with the given id or <code>null</code> if no row has the
 	 *         given id.
 	 */
-	T getRowById(int id);
+	T getRowById(int id) throws DataHandlerException;
 
 	/**
 	 * Returns all the unique values in this data source, for each different

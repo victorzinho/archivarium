@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
+import org.archivarium.Launcher;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
@@ -49,7 +50,8 @@ public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
 	@Override
 	public void update(ScoreRow row) throws DataHandlerException {
 		try {
-			provider.modifyScore(row.getScore());
+			Score score = updateScoreUrl(row.getScore());
+			provider.modifyScore(score);
 		} catch (ScoreProviderException e) {
 			throw new DataHandlerException(e);
 		}
@@ -97,12 +99,22 @@ public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
 	@Override
 	public void add(ScoreRow row) throws DataHandlerException {
 		try {
-			Score score = row.getScore();
+			Score score = updateScoreUrl(row.getScore());
 			provider.addScore(score);
 			eventBus.fireEvent(new ScoreAddedEvent(score));
 		} catch (ScoreProviderException e) {
 			throw new DataHandlerException(e);
 		}
+	}
+
+	private Score updateScoreUrl(Score score) {
+		String root = Launcher.getScoreRootDirectory();
+		String url = score.getURL();
+		if (url != null && url.startsWith(root)) {
+			score.setURL(url.replace(root, ""));
+		}
+
+		return score;
 	}
 
 	public RowEditionPanel<ScoreRow> getRowEditionPanel() {

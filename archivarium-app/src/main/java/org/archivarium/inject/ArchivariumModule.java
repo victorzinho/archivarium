@@ -4,6 +4,7 @@ import geomatico.events.EventBus;
 
 import java.util.ResourceBundle;
 
+import org.archivarium.Launcher;
 import org.archivarium.ScoreProvider;
 import org.archivarium.data.ScoreProviderDataHandler;
 import org.archivarium.data.ScoreProviderDataSource;
@@ -41,8 +42,7 @@ public class ArchivariumModule extends AbstractModule implements
 	public ScoreProvider get() {
 		if (local == null) {
 			try {
-				String database = System.getProperty("archivarium.db");
-				local = new H2ScoreProvider(database);
+				local = new H2ScoreProvider(Launcher.getDatabase());
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

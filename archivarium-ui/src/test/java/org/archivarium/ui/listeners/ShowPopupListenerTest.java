@@ -107,7 +107,8 @@ public class ShowPopupListenerTest {
 		return panel;
 	}
 
-	private ArchivariumMainPanel<Row> mockMainPanel(boolean rowOpenable) {
+	private ArchivariumMainPanel<Row> mockMainPanel(boolean rowOpenable)
+			throws Exception {
 		table = mock(JTable.class);
 		when(table.rowAtPoint(any(Point.class))).thenReturn(1);
 		when(table.getRowCount()).thenReturn(5);

@@ -170,7 +170,7 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 		eventBus.fireEvent(new SearchTextChangeEvent(this, search.getText()));
 	}
 
-	public void selectUpdateTab() {
+	public void selectUpdateTab() throws DataHandlerException {
 		UpdateRowPanelListener<T> listener = new UpdateRowPanelListener<T>(
 				this, eventBus);
 		AcceptCancelPanel updatePanel = createUpdatePanel(listener,

@@ -29,15 +29,15 @@ public class PopupAction<T extends Row> extends AbstractAction {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		String action = e.getActionCommand();
-		if (action.equals(UPDATE)) {
-			mainPanel.selectUpdateTab();
-		} else if (action.equals(DELETE)) {
-			try {
+		try {
+			if (action.equals(UPDATE)) {
+				mainPanel.selectUpdateTab();
+			} else if (action.equals(DELETE)) {
 				mainPanel.getDataHandler().delete(mainPanel.getSelectedId());
-			} catch (DataHandlerException exception) {
-				eventBus.fireEvent(new ExceptionEvent("cannot_remove_score",
-						exception));
 			}
+		} catch (DataHandlerException exception) {
+			eventBus.fireEvent(new ExceptionEvent("cannot_remove_score",
+					exception));
 		}
 	}
 }

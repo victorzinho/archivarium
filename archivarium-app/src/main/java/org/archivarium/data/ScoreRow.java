@@ -105,4 +105,37 @@ public class ScoreRow implements Row {
 	public boolean isOpenable() {
 		return score.getURL() != null;
 	}
+
+	public static String getString(Score score, int column) {
+		if (column == COLUMN_INDEX_FORMAT) {
+			return score.getFormat();
+		} else if (column == COLUMN_INDEX_NAME) {
+			return score.getName();
+		} else if (column == COLUMN_INDEX_AUTHOR) {
+			return score.getAuthor();
+		} else if (column == COLUMN_INDEX_DESCRIPTION) {
+			return score.getDescription();
+		} else if (column == COLUMN_INDEX_INSTRUMENTS) {
+			List<String> instruments = score.getInstruments();
+			String value = "";
+			if (instruments != null) {
+				for (int j = 0; j < instruments.size(); j++) {
+					if (j > 0) {
+						value += ", ";
+					}
+					value += instruments.get(j);
+				}
+			}
+
+			return value;
+		} else if (column == COLUMN_INDEX_EDITION) {
+			return score.getEdition();
+		} else if (column == COLUMN_INDEX_LOCATION) {
+			return score.getLocation();
+		} else if (column == COLUMN_INDEX_GENRE) {
+			return score.getGenre();
+		} else {
+			throw new IllegalArgumentException();
+		}
+	}
 }

@@ -2,7 +2,7 @@ package org.archivarium.data;
 
 import geomatico.events.EventBus;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -10,10 +10,12 @@ import java.util.Set;
 
 import javax.swing.ImageIcon;
 
+import org.archivarium.Launcher;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
 import org.archivarium.impl.DefaultScore;
+import org.archivarium.ui.data.DataHandlerException;
 import org.archivarium.ui.data.DataSource;
 import org.archivarium.ui.events.DataChangeEvent;
 
@@ -36,20 +38,18 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 
 	private String[][] uniqueValues;
 
-	@Inject
 	private EventBus eventBus;
-
 	private ScoreProvider provider;
 
 	@Inject
-	public ScoreProviderDataSource(@Assisted ScoreProvider provider)
-			throws ScoreProviderException {
+	public ScoreProviderDataSource(@Assisted ScoreProvider provider,
+			EventBus eventBus) throws ScoreProviderException {
 		this.provider = provider;
 		this.criteria = new String[ScoreRow.COLUMNS.length];
 		this.text = null;
 		this.uniqueValues = new String[ScoreRow.COLUMNS.length][];
-
-		updateCriteria(-1);
+		this.eventBus = eventBus;
+		update();
 	}
 
 	@Override
@@ -68,11 +68,11 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 	}
 
 	@Override
-	public ScoreRow getRowById(int id) {
+	public ScoreRow getRowById(int id) throws DataHandlerException {
 		try {
 			return new ScoreRow(provider.getScoreById(id));
 		} catch (ScoreProviderException e) {
-			throw new RuntimeException(e);
+			throw new DataHandlerException(e);
 		}
 	}
 
@@ -86,7 +86,19 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 		return rows;
 	}
 
-	public void updateCriteria(int column) throws ScoreProviderException {
+	public void update() throws ScoreProviderException {
+		update(-1);
+	}
+
+	/**
+	 * Updates the current scores depending on the criteria and the text.
+	 * 
+	 * @param column
+	 *            The column that fired the score change or -1 if none.
+	 * @throws ScoreProviderException
+	 *             if the scores cannot be obtained.
+	 */
+	private void update(int column) throws ScoreProviderException {
 		boolean hasCriteria = false;
 		for (String criterion : criteria) {
 			if (criterion != null) {
@@ -95,6 +107,7 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 			}
 		}
 
+		// Update 'scores', which contains all scores matching the criteria
 		if (hasCriteria) {
 			Score model = new DefaultScore();
 			model.setName(criteria[ScoreRow.COLUMN_INDEX_NAME]);
@@ -113,58 +126,33 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 			this.scores = provider.getScores();
 		}
 
-		updateRows(column);
-
-	}
-
-	private List<Score> filter(List<Score> scores) {
-		if (text == null || text.length() == 0) {
-			return scores;
-		}
-
-		List<Score> ret = new ArrayList<Score>();
-		for (Score score : scores) {
-			String name = score.getName();
-			String author = score.getAuthor();
-			String description = score.getDescription();
-			String edition = score.getEdition();
-			String location = score.getLocation();
-			String genre = score.getGenre();
-			if (name != null && name.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else if (author != null && author.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else if (description != null
-					&& description.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else if (edition != null && edition.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else if (location != null
-					&& location.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else if (genre != null && genre.toLowerCase().contains(text)) {
-				ret.add(score);
-			} else {
-				List<String> instruments = score.getInstruments();
-				for (String instrument : instruments) {
-					if (instrument.toLowerCase().contains(text)) {
-						ret.add(score);
-						break;
-					}
-				}
+		// Update relative URLs
+		for (Score score : this.scores) {
+			String url = score.getURL();
+			if (!new File(url).isAbsolute()) {
+				String newUrl = Launcher.getScoreRootDirectory()
+						+ File.separator + url;
+				score.setURL(newUrl);
 			}
 		}
-		return ret;
-	}
 
-	private void updateRows(int column) throws ScoreProviderException {
-		this.filtered = filter(this.scores);
+		// Update 'filtered', which contains only the 'scores' that
+		// contain the text in any field
+		this.filtered = new ScoreFilter(text).filter(this.scores);
 
+		// Update 'rows' from 'filtered'
 		this.rows = new ScoreRow[filtered.size()];
 		for (int i = 0; i < rows.length; i++) {
 			rows[i] = new ScoreRow(filtered.get(i));
 		}
 
+		// Update unique values
+		updateUniqueValues(column);
+
+		eventBus.fireEvent(new DataChangeEvent(this));
+	}
+
+	private void updateUniqueValues(int column) throws ScoreProviderException {
 		int numCriteria = 0;
 		int index = -1;
 		for (int i = 0; i < criteria.length; i++) {
@@ -174,40 +162,29 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 			}
 		}
 
-		for (int i = 0; i < uniqueValues.length; i++) {
-			Set<String> set = new HashSet<String>();
-			String value = null;
-			List<Score> scores = numCriteria == 1 && index == i ? filter(provider
-					.getScores()) : this.filtered;
-			for (Score score : scores) {
-				if (i == ScoreRow.COLUMN_INDEX_NAME) {
-					value = score.getName();
-				} else if (i == ScoreRow.COLUMN_INDEX_AUTHOR) {
-					value = score.getAuthor();
-				} else if (i == ScoreRow.COLUMN_INDEX_DESCRIPTION) {
-					value = score.getDescription();
-				} else if (i == ScoreRow.COLUMN_INDEX_INSTRUMENTS) {
-					List<String> instruments = score.getInstruments();
-					value = "";
-					for (int j = 0; j < instruments.size(); j++) {
-						if (j > 0) {
-							value += ", ";
-						}
-						value += instruments.get(j);
-					}
-				} else if (i == ScoreRow.COLUMN_INDEX_EDITION) {
-					value = score.getEdition();
-				} else if (i == ScoreRow.COLUMN_INDEX_LOCATION) {
-					value = score.getLocation();
-				} else if (i == ScoreRow.COLUMN_INDEX_GENRE) {
-					value = score.getGenre();
-				}
+		ScoreFilter filter = new ScoreFilter(text);
+		List<Score> allScoresFiltered = filter.filter(provider.getScores());
 
+		for (int i = 0; i < uniqueValues.length; i++) {
+			List<Score> scores;
+			// If we have only one criterion, we get the unique values for all
+			// available scores, not only the ones we filtered
+			if (numCriteria == 1 && index == i) {
+				scores = allScoresFiltered;
+			} else {
+				scores = this.filtered;
+			}
+
+			Set<String> set = new HashSet<String>();
+			for (Score score : scores) {
+				String value = ScoreRow.getString(score, i);
 				if (value != null && value.length() > 0) {
 					set.add(value);
 				}
 			}
 
+			// We don't update the unique values for the column
+			// that fired the change
 			if (i != column) {
 				uniqueValues[i] = set.toArray(new String[set.size()]);
 			}
@@ -216,21 +193,23 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 
 	public void setCategory(String category, int column)
 			throws ScoreProviderException {
+		// Previous and new category are null
 		if (criteria[column] == null && category == null) {
 			return;
-		} else if (criteria[column] != null && category != null
+		}
+
+		// Previous and new category are the same
+		if (criteria[column] != null && category != null
 				&& criteria[column].equals(category)) {
 			return;
-		} else {
-			this.criteria[column] = category;
-			updateCriteria(column);
-			eventBus.fireEvent(new DataChangeEvent(this));
 		}
+
+		this.criteria[column] = category;
+		update(column);
 	}
 
 	public void setText(String text) throws ScoreProviderException {
 		this.text = text.toLowerCase();
-		updateCriteria(-1);
-		eventBus.fireEvent(new DataChangeEvent(this));
+		update();
 	}
 }

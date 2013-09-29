@@ -8,10 +8,15 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.util.Collections;
+
 import javax.swing.ImageIcon;
 
+import org.archivarium.Launcher;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
+import org.archivarium.impl.DefaultScore;
 import org.archivarium.inject.ScoreDataFactory;
 import org.archivarium.ui.data.Row;
 import org.junit.Test;
@@ -116,6 +121,39 @@ public class ScoreProviderDataSourceTest extends AbstractArchivariumTest {
 				"sib");
 		Row row = handler.getRowById(0);
 		assertTrue(row.getData(ScoreRow.COLUMN_INDEX_FORMAT) instanceof ImageIcon);
+	}
+
+	@Test
+	public void getRowAbsoluteUrl() throws Exception {
+		File tmp = File.createTempFile("archivarium", ".pdf");
+		tmp.delete();
+
+		Score score = mock(Score.class);
+		when(score.getURL()).thenReturn(tmp.getAbsolutePath());
+		ScoreProvider provider = mock(ScoreProvider.class);
+		when(provider.getScoreById(anyInt())).thenReturn(score);
+		ScoreProviderDataSource source = factory.createSource(provider);
+
+		assertEquals(tmp.getAbsolutePath(), source.getRowById(0).getScore()
+				.getURL());
+	}
+
+	@Test
+	public void getRowRelativeUrl() throws Exception {
+		File tmp = File.createTempFile("archivarium", ".pdf");
+		tmp.delete();
+		String root = tmp.getParentFile().getAbsolutePath();
+		System.setProperty(Launcher.SCORE_ROOT, root);
+
+		Score score = new DefaultScore();
+		score.setURL(tmp.getName());
+		ScoreProvider provider = mock(ScoreProvider.class);
+		when(provider.getScores()).thenReturn(Collections.singletonList(score));
+		when(provider.getScoreById(anyInt())).thenReturn(score);
+		ScoreProviderDataSource source = factory.createSource(provider);
+
+		assertEquals(tmp.getAbsolutePath(), source.getRows()[0].getScore()
+				.getURL());
 	}
 
 	private ScoreProviderDataSource mockScoreProvider(String url, String format)

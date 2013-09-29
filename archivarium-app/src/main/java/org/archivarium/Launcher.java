@@ -27,6 +27,10 @@ import com.google.inject.Injector;
 public class Launcher implements Runnable {
 	private static final Logger logger = Logger.getLogger(Launcher.class);
 
+	public static final String DATABASE = "archivarium.db";
+	public static final String BACKUP_DIR = "archivarium.backup_dir";
+	public static final String SCORE_ROOT = "archivarium.scores.root_dir";
+
 	private static Injector injector;
 
 	public static void main(String[] args) throws InvocationTargetException,
@@ -67,14 +71,12 @@ public class Launcher implements Runnable {
 	}
 
 	private void backup() throws SQLException {
-		String backups = System.getProperty("archivarium.backup_dir");
-		File database = new File(System.getProperty("archivarium.db"))
-				.getAbsoluteFile();
+		File database = new File(DATABASE).getAbsoluteFile();
 
 		File older = null;
 		File f = null;
 		for (int i = 0; i < 10; i++) {
-			f = new File(backups, "archivarium." + i + ".zip");
+			f = new File(BACKUP_DIR, "archivarium." + i + ".zip");
 			if (!f.exists()) {
 				break;
 			}
@@ -136,5 +138,13 @@ public class Launcher implements Runnable {
 		};
 
 		eventBus.addHandler(ExceptionEvent.class, exceptionHandler);
+	}
+
+	public static String getDatabase() {
+		return System.getProperty(DATABASE);
+	}
+
+	public static String getScoreRootDirectory() {
+		return System.getProperty(SCORE_ROOT);
 	}
 }

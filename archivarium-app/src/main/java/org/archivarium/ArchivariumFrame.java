@@ -25,7 +25,6 @@ import org.archivarium.ui.UIFactory;
 import org.archivarium.ui.data.DataHandlerException;
 import org.archivarium.ui.events.CategoryChangeEvent;
 import org.archivarium.ui.events.CategoryChangeEventHandler;
-import org.archivarium.ui.events.DataChangeEvent;
 import org.archivarium.ui.events.SearchTextChangeEvent;
 import org.archivarium.ui.events.SearchTextChangeEventHandler;
 import org.archivarium.ui.panels.ArchivariumMainPanel;
@@ -82,8 +81,6 @@ public class ArchivariumFrame extends JFrame implements
 		rootPanel.add(main, BorderLayout.CENTER);
 		add(rootPanel);
 
-		eventBus.fireEvent(new DataChangeEvent(source));
-
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		pack();
 		setLocationRelativeTo(null);
@@ -125,8 +122,7 @@ public class ArchivariumFrame extends JFrame implements
 
 	private void sourceChange() {
 		try {
-			source.updateCriteria(-1);
-			eventBus.fireEvent(new DataChangeEvent(source));
+			source.update();
 		} catch (ScoreProviderException e) {
 			eventBus.fireEvent(new ExceptionEvent("Cannot obtain scores", e));
 		}

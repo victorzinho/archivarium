@@ -26,7 +26,7 @@ import org.mockito.ArgumentCaptor;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class PopupActionTest {
 	@Test
-	public void update() {
+	public void update() throws Exception {
 		EventBus bus = mock(EventBus.class);
 		ArchivariumMainPanel<Row> panel = mock(ArchivariumMainPanel.class);
 

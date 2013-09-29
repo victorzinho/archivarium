@@ -1,5 +1,6 @@
 package org.archivarium.data;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -17,14 +18,19 @@ import java.net.URI;
 
 import javax.inject.Inject;
 
+import org.archivarium.Launcher;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
+import org.archivarium.events.ScoreAddedEvent;
+import org.archivarium.events.ScoreAddedHandler;
 import org.archivarium.events.ScoreDeletedEvent;
 import org.archivarium.events.ScoreDeletedHandler;
+import org.archivarium.impl.DefaultScore;
 import org.archivarium.inject.ScoreDataFactory;
 import org.archivarium.ui.data.DataHandlerException;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -143,7 +149,7 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 	}
 
 	@Test
-	public void testremove() throws Exception {
+	public void remove() throws Exception {
 		ScoreDeletedHandler eventHandler = mock(ScoreDeletedHandler.class);
 		bus.addHandler(ScoreDeletedEvent.class, eventHandler);
 
@@ -154,6 +160,59 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 		factory.createHandler(provider).delete(0);
 
 		verify(eventHandler).deleted(same(score));
+		verify(provider).deleteScore(same(score));
+	}
+
+	@Test
+	public void add() throws Exception {
+		ScoreAddedHandler eventHandler = mock(ScoreAddedHandler.class);
+		bus.addHandler(ScoreAddedEvent.class, eventHandler);
+
+		Score score = mock(Score.class);
+		ScoreProvider provider = mock(ScoreProvider.class);
+		factory.createHandler(provider).add(new ScoreRow(score));
+
+		verify(eventHandler).added(same(score));
+		verify(provider).addScore(same(score));
+	}
+
+	@Test
+	public void update() throws Exception {
+		Score score = mock(Score.class);
+		ScoreProvider provider = mock(ScoreProvider.class);
+		factory.createHandler(provider).update(new ScoreRow(score));
+		verify(provider).modifyScore(same(score));
+	}
+
+	@Test
+	public void addScoreInRootDirectory() throws Exception {
+		testScoreInRootDirectory("add");
+	}
+
+	@Test
+	public void updateScoreInRootDirectory() throws Exception {
+		testScoreInRootDirectory("update");
+	}
+
+	private void testScoreInRootDirectory(String action) throws Exception {
+		System.setProperty(Launcher.SCORE_ROOT, "/tmp/");
+
+		String scoreName = "score.pdf";
+		Score score = new DefaultScore();
+		score.setURL(Launcher.getScoreRootDirectory() + scoreName);
+		ScoreProvider provider = mock(ScoreProvider.class);
+
+		ArgumentCaptor<Score> arg = ArgumentCaptor.forClass(Score.class);
+
+		if (action.equals("add")) {
+			factory.createHandler(provider).add(new ScoreRow(score));
+			verify(provider).addScore(arg.capture());
+		} else {
+			factory.createHandler(provider).update(new ScoreRow(score));
+			verify(provider).modifyScore(arg.capture());
+		}
+
+		assertEquals(scoreName, arg.getValue().getURL());
 	}
 
 	private ScoreProviderDataHandler mockHandlerForOpen(String url)
