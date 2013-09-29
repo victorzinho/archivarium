@@ -16,6 +16,7 @@ import javax.swing.event.ListSelectionEvent;
 
 import org.archivarium.ui.events.CategoryChangeEvent;
 import org.archivarium.ui.events.CategoryChangeEventHandler;
+import org.archivarium.ui.panels.ArchivariumMainPanel;
 import org.archivarium.ui.panels.Selector;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +39,8 @@ public class SelectorListenerTest {
 	@Test
 	public void noSelection() {
 		Selector selector = mockSelector();
-		SelectorListener listener = new SelectorListener(selector, 0, bus);
+		SelectorListener listener = new SelectorListener(selector, 0, bus,
+				mock(ArchivariumMainPanel.class));
 
 		when(selector.getSelectedRow()).thenReturn(-1);
 		listener.valueChanged(mock(ListSelectionEvent.class));
@@ -56,7 +58,8 @@ public class SelectorListenerTest {
 		Selector selector = mockSelector();
 		when(selector.getSelectedRow()).thenReturn(0);
 
-		SelectorListener listener = new SelectorListener(selector, 0, bus);
+		SelectorListener listener = new SelectorListener(selector, 0, bus,
+				mock(ArchivariumMainPanel.class));
 		listener.valueChanged(mock(ListSelectionEvent.class));
 
 		verify(handler).changeCategory(any(), isNull(String.class), anyInt());
@@ -67,7 +70,8 @@ public class SelectorListenerTest {
 		Selector selector = mockSelector();
 		when(selector.getSelectedRow()).thenReturn(2);
 
-		SelectorListener listener = new SelectorListener(selector, 0, bus);
+		SelectorListener listener = new SelectorListener(selector, 0, bus,
+				mock(ArchivariumMainPanel.class));
 		listener.valueChanged(mock(ListSelectionEvent.class));
 
 		verify(handler).changeCategory(any(), same(VALUE), anyInt());

@@ -19,7 +19,8 @@ import org.archivarium.ui.models.SelectorTableModel;
 public class Selector extends JTable {
 	private SelectorDataChangeHandler handler;
 
-	public Selector(DataSource<?> source, int column, UIFactory factory,
+	public Selector(DataSource<?> source, int column,
+			ArchivariumMainPanel<?> parent, UIFactory factory,
 			ResourceBundle messages, EventBus eventBus)
 			throws DataHandlerException {
 		super();
@@ -31,7 +32,7 @@ public class Selector extends JTable {
 		eventBus.addHandler(DataChangeEvent.class, handler);
 
 		getSelectionModel().addListSelectionListener(
-				new SelectorListener(this, column, eventBus));
+				new SelectorListener(this, column, eventBus, parent));
 
 		setAutoCreateRowSorter(false);
 		setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

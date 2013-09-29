@@ -60,6 +60,7 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 			EventBus eventBus) throws DataHandlerException {
 		this.handler = handler;
 		this.factory = factory;
+		this.eventBus = eventBus;
 
 		// Create root panel
 		layout = new CardLayout();
@@ -180,10 +181,11 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 
 	public void selectTab(Tab tab) {
 		layout.show(rootPanel, tab.name());
-		if (tab.equals(Tab.UPDATE)) {
-			update.setVisible(true);
-			update.setSelected(true);
-		}
+		local.setSelected(tab.equals(Tab.LOCAL));
+		add.setSelected(tab.equals(Tab.ADD));
+		all.setSelected(tab.equals(Tab.ALL));
+		update.setSelected(tab.equals(Tab.UPDATE));
+		update.setVisible(tab.equals(Tab.UPDATE));
 	}
 
 	private AcceptCancelPanel createUpdatePanel(

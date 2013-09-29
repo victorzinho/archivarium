@@ -54,7 +54,7 @@ public class LocalDataPanel<T extends Row> extends JPanel {
 			leaf.setWeight(1.0 / columnSelectors.length);
 			children.add(leaf);
 			Selector selector = new Selector(source, columnSelectors[i],
-					factory, messages, eventBus);
+					mainPanel, factory, messages, eventBus);
 			selectorTables[columnSelectors[i]] = selector;
 		}
 		selectorsSplit.setChildren(children);

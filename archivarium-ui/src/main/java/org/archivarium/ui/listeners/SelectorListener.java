@@ -6,18 +6,21 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import org.archivarium.ui.events.CategoryChangeEvent;
-import org.archivarium.ui.panels.LocalDataPanel;
+import org.archivarium.ui.panels.ArchivariumMainPanel;
 import org.archivarium.ui.panels.Selector;
 
 public class SelectorListener implements ListSelectionListener {
 	private int column;
 	private Selector selector;
 	private EventBus eventBus;
+	private ArchivariumMainPanel<?> mainPanel;
 
-	public SelectorListener(Selector selector, int column, EventBus eventBus) {
+	public SelectorListener(Selector selector, int column, EventBus eventBus,
+			ArchivariumMainPanel<?> mainPanel) {
 		this.column = column;
 		this.selector = selector;
 		this.eventBus = eventBus;
+		this.mainPanel = mainPanel;
 	}
 
 	@Override
@@ -35,7 +38,6 @@ public class SelectorListener implements ListSelectionListener {
 			category = selector.getValueAt(selected, 0).toString();
 		}
 
-		eventBus.fireEvent(new CategoryChangeEvent(LocalDataPanel.class,
-				category, column));
+		eventBus.fireEvent(new CategoryChangeEvent(mainPanel, category, column));
 	}
 }
