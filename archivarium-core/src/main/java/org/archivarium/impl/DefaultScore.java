@@ -23,7 +23,8 @@ public class DefaultScore implements Score {
 	@GenericGenerator(name = "increment", strategy = "increment")
 	private int id;
 
-	private String name, author, description, edition, format, location, genre;
+	private String title, composer, description, edition, arrangement, origin,
+			format, location, genre, lyrics, language;
 	private String url;
 
 	@ElementCollection(fetch = FetchType.EAGER)
@@ -37,13 +38,13 @@ public class DefaultScore implements Score {
 	}
 
 	@Override
-	public String getName() {
-		return name;
+	public String getTitle() {
+		return title;
 	}
 
 	@Override
-	public String getAuthor() {
-		return author;
+	public String getComposer() {
+		return composer;
 	}
 
 	@Override
@@ -59,6 +60,16 @@ public class DefaultScore implements Score {
 	@Override
 	public String getEdition() {
 		return edition;
+	}
+
+	@Override
+	public String getArrangement() {
+		return arrangement;
+	}
+
+	@Override
+	public String getOrigin() {
+		return origin;
 	}
 
 	@Override
@@ -81,18 +92,28 @@ public class DefaultScore implements Score {
 		return genre;
 	}
 
+	@Override
+	public String getLyrics() {
+		return lyrics;
+	}
+
+	@Override
+	public String getLanguage() {
+		return language;
+	}
+
 	public void setId(int id) {
 		this.id = id;
 	}
 
 	@Override
-	public void setName(String name) {
-		this.name = name;
+	public void setTitle(String name) {
+		this.title = name;
 	}
 
 	@Override
-	public void setAuthor(String author) {
-		this.author = author;
+	public void setComposer(String composer) {
+		this.composer = composer;
 	}
 
 	@Override
@@ -103,6 +124,16 @@ public class DefaultScore implements Score {
 	@Override
 	public void setEdition(String edition) {
 		this.edition = edition;
+	}
+
+	@Override
+	public void setArrangement(String arrangement) {
+		this.arrangement = arrangement;
+	}
+
+	@Override
+	public void setOrigin(String origin) {
+		this.origin = origin;
 	}
 
 	@Override
@@ -131,6 +162,16 @@ public class DefaultScore implements Score {
 	}
 
 	@Override
+	public void setLyrics(String lyrics) {
+		this.lyrics = lyrics;
+	}
+
+	@Override
+	public void setLanguage(String language) {
+		this.language = language;
+	}
+
+	@Override
 	public boolean equals(Object obj) {
 		if (!(obj instanceof Score)) {
 			return false;
@@ -143,14 +184,18 @@ public class DefaultScore implements Score {
 		}
 
 		try {
-			checkField(name, score.getName());
-			checkField(author, score.getAuthor());
+			checkField(title, score.getTitle());
+			checkField(composer, score.getComposer());
 			checkField(description, score.getDescription());
 			checkField(edition, score.getEdition());
+			checkField(arrangement, score.getArrangement());
+			checkField(origin, score.getOrigin());
 			checkField(url, score.getURL());
 			checkField(format, score.getFormat());
 			checkField(location, score.getLocation());
 			checkField(genre, score.getGenre());
+			checkField(lyrics, score.getLyrics());
+			checkField(language, score.getLanguage());
 		} catch (AssertionError e) {
 			return false;
 		}
@@ -188,11 +233,11 @@ public class DefaultScore implements Score {
 	@Override
 	public int hashCode() {
 		int code = id;
-		if (name != null) {
-			code += name.hashCode();
+		if (title != null) {
+			code += title.hashCode();
 		}
-		if (author != null) {
-			code += author.hashCode();
+		if (composer != null) {
+			code += composer.hashCode();
 		}
 		if (description != null) {
 			code += description.hashCode();
@@ -202,6 +247,12 @@ public class DefaultScore implements Score {
 		}
 		if (edition != null) {
 			code += edition.hashCode();
+		}
+		if (arrangement != null) {
+			code += arrangement.hashCode();
+		}
+		if (origin != null) {
+			code += origin.hashCode();
 		}
 		if (url != null) {
 			code += url.hashCode();
@@ -214,6 +265,12 @@ public class DefaultScore implements Score {
 		}
 		if (genre != null) {
 			code += genre.hashCode();
+		}
+		if (lyrics != null) {
+			code += lyrics.hashCode();
+		}
+		if (language != null) {
+			code += language.hashCode();
 		}
 
 		return code;

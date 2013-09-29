@@ -6,6 +6,7 @@ import geomatico.events.ExceptionEvent;
 import java.awt.BorderLayout;
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 
 import javax.imageio.ImageIO;
@@ -13,9 +14,11 @@ import javax.inject.Inject;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
+import javax.swing.table.TableColumn;
 
 import org.archivarium.data.ScoreProviderDataSource;
 import org.archivarium.data.ScoreRow;
+import org.archivarium.data.ScoreSchema;
 import org.archivarium.events.ScoreAddedEvent;
 import org.archivarium.events.ScoreAddedHandler;
 import org.archivarium.events.ScoreDeletedEvent;
@@ -57,25 +60,48 @@ public class ArchivariumFrame extends JFrame implements
 
 	private ScoreProviderDataSource source;
 
-	public void launch() throws IOException, DataHandlerException,
-			ScoreProviderException {
+	public void launch(List<String> fields, List<String> selectors)
+			throws IOException, DataHandlerException, ScoreProviderException {
 		setTitle("Archivarium");
 		setIconImage(ImageIO.read(icon));
 
-		int[] selectors = new int[] { ScoreRow.COLUMN_INDEX_AUTHOR,
-				ScoreRow.COLUMN_INDEX_INSTRUMENTS, ScoreRow.COLUMN_INDEX_GENRE };
+		int[] fieldIndexes = new int[fields.size()];
+		for (int i = 0; i < fieldIndexes.length; i++) {
+			String field = fields.get(i);
+			int index = ScoreSchema.FIELD_NAMES.indexOf(field);
+			if (index == -1) {
+				throw new IllegalArgumentException("Invalid field:" + field);
+			}
+			fieldIndexes[i] = index;
+		}
+
+		int[] selectorIndexes = new int[selectors.size()];
+		for (int i = 0; i < selectorIndexes.length; i++) {
+			String selector = selectors.get(i);
+			int index = fields.indexOf(selector) + 1;
+			if (index == -1) {
+				throw new IllegalArgumentException("Invalid field:" + selector);
+			}
+			selectorIndexes[i] = index;
+		}
+
+		ScoreSchema schema = new ScoreSchema(fieldIndexes);
 
 		eventBus.addHandler(CategoryChangeEvent.class, this);
 		eventBus.addHandler(ScoreDeletedEvent.class, this);
 		eventBus.addHandler(ScoreAddedEvent.class, this);
 		eventBus.addHandler(SearchTextChangeEvent.class, this);
 
-		source = dataFactory.createSource(provider);
+		source = dataFactory.createSource(provider, schema);
+		source.update();
+
 		main = new ArchivariumMainPanel<ScoreRow>(source,
-				dataFactory.createHandler(provider), selectors, uiFactory,
-				messages, eventBus);
-		main.getLocalDataPanel().setColumnFixedWidth(
-				ScoreRow.COLUMN_INDEX_FORMAT, 30);
+				dataFactory.createHandler(provider, schema), selectorIndexes,
+				uiFactory, messages, eventBus);
+
+		TableColumn tableColumn = main.getLocalDataPanel().getColumn(0);
+		tableColumn.setPreferredWidth(50);
+		tableColumn.setWidth(50);
 
 		JPanel rootPanel = new JPanel(new BorderLayout());
 		rootPanel.add(main, BorderLayout.CENTER);

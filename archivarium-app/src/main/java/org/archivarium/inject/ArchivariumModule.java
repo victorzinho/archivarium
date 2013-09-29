@@ -4,7 +4,7 @@ import geomatico.events.EventBus;
 
 import java.util.ResourceBundle;
 
-import org.archivarium.Launcher;
+import org.archivarium.ArchivariumConfig;
 import org.archivarium.ScoreProvider;
 import org.archivarium.data.ScoreProviderDataHandler;
 import org.archivarium.data.ScoreProviderDataSource;
@@ -22,9 +22,9 @@ public class ArchivariumModule extends AbstractModule implements
 
 	@Override
 	protected void configure() {
-		EventBus bus = EventBus.getInstance();
-
-		bind(EventBus.class).toInstance(bus);
+		bind(EventBus.class).toInstance(EventBus.getInstance());
+		bind(ArchivariumConfig.class).toInstance(
+				ArchivariumConfig.getInstance());
 		bind(UIFactory.class).to(DefaultUIFactory.class);
 		bind(ResourceBundle.class).toInstance(
 				ResourceBundle.getBundle("archivarium"));
@@ -42,7 +42,8 @@ public class ArchivariumModule extends AbstractModule implements
 	public ScoreProvider get() {
 		if (local == null) {
 			try {
-				local = new H2ScoreProvider(Launcher.getDatabase());
+				local = new H2ScoreProvider(ArchivariumConfig.getInstance()
+						.getDatabase());
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

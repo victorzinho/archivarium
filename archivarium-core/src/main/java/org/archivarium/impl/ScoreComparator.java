@@ -8,8 +8,8 @@ public class ScoreComparator {
 	public boolean matches(Score model, Score score)
 			throws ScoreProviderException {
 		try {
-			compareStrings(model.getName(), score.getName());
-			compareStrings(model.getAuthor(), score.getAuthor());
+			compareStrings(model.getTitle(), score.getTitle());
+			compareStrings(model.getComposer(), score.getComposer());
 			compareStrings(model.getDescription(), score.getDescription());
 			compareStrings(model.getEdition(), score.getEdition());
 

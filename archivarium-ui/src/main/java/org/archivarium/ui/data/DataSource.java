@@ -39,14 +39,9 @@ public interface DataSource<T extends Row> {
 	T getRowById(int id) throws DataHandlerException;
 
 	/**
-	 * Returns all the unique values in this data source, for each different
-	 * column.
+	 * Returns the unique values in this data source for the given column.
 	 * 
-	 * @return An 2D array containing all the unique values. Column and row
-	 *         indexes are transposed; for example,
-	 *         <code>array[0][0..n-1]</code> contains the unique values for the
-	 *         first column (given that <code>array</code> is the result of this
-	 *         method).
+	 * @return An array containing all the unique values.
 	 */
-	String[][] getUniqueValues();
+	String[] getUniqueValues(int column);
 }

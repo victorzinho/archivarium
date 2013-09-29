@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly>
+	<id>extension</id>
+	<formats>
+		<format>dir</format>
+	</formats>
+	<baseDirectory>.</baseDirectory>
+	<fileSets>
+		<fileSet>
+			<directory>src/main/assembly</directory>
+			<includes>
+				<include>archivarium.*</include>
+			</includes>
+			<outputDirectory>/</outputDirectory>
+		</fileSet>
+	</fileSets>
+
+	<dependencySets>
+		<dependencySet>
+			<unpack>false</unpack>
+			<scope>runtime</scope>
+			<outputDirectory>/lib</outputDirectory>
+			<outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}.${artifact.extension}
+			</outputFileNameMapping>
+		</dependencySet>
+	</dependencySets>
+</assembly>

@@ -28,7 +28,7 @@ public class SelectorDataChangeHandler implements DataChangeEventHandler {
 		}
 
 		String[] currentValues = model.getValues();
-		String[] newValues = source.getUniqueValues()[column];
+		String[] newValues = source.getUniqueValues(column);
 
 		if (!Arrays.equals(currentValues, newValues)) {
 			// Get selected item

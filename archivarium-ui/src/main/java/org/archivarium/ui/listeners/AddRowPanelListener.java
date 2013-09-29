@@ -14,7 +14,7 @@ import org.archivarium.ui.panels.ArchivariumMainPanel.Tab;
 public class AddRowPanelListener<T extends Row> implements
 		AcceptCancelPanel.Listener {
 
-	private RowEditionPanel<T> editPanel;
+	private RowEditionPanel<T> addPanel;
 	private ArchivariumMainPanel<T> mainPanel;
 	private DataHandler<T> handler;
 	private EventBus eventBus;
@@ -23,15 +23,15 @@ public class AddRowPanelListener<T extends Row> implements
 			EventBus eventBus) {
 		this.mainPanel = mainPanel;
 		this.handler = mainPanel.getDataHandler();
-		this.editPanel = handler.getRowEditionPanel();
+		this.addPanel = handler.getAddPanel();
 		this.eventBus = eventBus;
 	}
 
 	@Override
 	public void accept() {
 		try {
-			handler.add(editPanel.getRow());
-			editPanel.setRow(null);
+			handler.add(addPanel.getRow());
+			addPanel.setRow(null);
 			mainPanel.selectTab(Tab.LOCAL);
 		} catch (DataHandlerException exception) {
 			eventBus.fireEvent(new ExceptionEvent("cannot_update_score",
@@ -41,6 +41,6 @@ public class AddRowPanelListener<T extends Row> implements
 
 	@Override
 	public void cancel() {
-		editPanel.setRow(null);
+		addPanel.setRow(null);
 	}
 }

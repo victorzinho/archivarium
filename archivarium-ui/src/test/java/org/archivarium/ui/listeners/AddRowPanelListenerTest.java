@@ -85,7 +85,7 @@ public class AddRowPanelListenerTest {
 		editPanel = mock(RowEditionPanel.class);
 
 		handler = mock(DataHandler.class);
-		when(handler.getRowEditionPanel()).thenReturn(editPanel);
+		when(handler.getAddPanel()).thenReturn(editPanel);
 
 		ArchivariumMainPanel<Row> panel = mock(ArchivariumMainPanel.class);
 		when(panel.getDataHandler()).thenReturn(handler);

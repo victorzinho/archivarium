@@ -11,19 +11,38 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 public class FileField extends JPanel implements ActionListener {
 	private JTextField fileField;
 	private int selectionMode;
 
-	public FileField(int selectionMode) {
+	public FileField(int selectionMode, final ChangeListener listener) {
 		this.selectionMode = selectionMode;
 
 		setLayout(new GridBagLayout());
 
 		fileField = new JTextField();
-		fileField.setEditable(false);
-		fileField.setFocusable(false);
+		fileField.getDocument().addDocumentListener(new DocumentListener() {
+
+			@Override
+			public void removeUpdate(DocumentEvent e) {
+				listener.stateChanged(new ChangeEvent(FileField.this));
+			}
+
+			@Override
+			public void insertUpdate(DocumentEvent e) {
+				listener.stateChanged(new ChangeEvent(FileField.this));
+			}
+
+			@Override
+			public void changedUpdate(DocumentEvent e) {
+				listener.stateChanged(new ChangeEvent(FileField.this));
+			}
+		});
 
 		JButton browse = new JButton("...");
 		browse.addActionListener(this);
@@ -55,7 +74,11 @@ public class FileField extends JPanel implements ActionListener {
 	}
 
 	public File getFile() {
-		return new File(fileField.getText());
+		if (fileField.getText() == null || fileField.getText().length() == 0) {
+			return null;
+		} else {
+			return new File(fileField.getText());
+		}
 	}
 
 	public void setFile(String file) {

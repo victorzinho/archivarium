@@ -72,9 +72,15 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 
 		rootPanel.add(localDataPanel, Tab.LOCAL.toString());
 		rootPanel.add(allDataPanel, Tab.ALL.toString());
-		rootPanel.add(
-				createUpdatePanel(new AddRowPanelListener<T>(this, eventBus),
-						null), Tab.ADD.toString());
+
+		RowEditionPanel<T> rowEditionPanel = handler.getAddPanel();
+		rowEditionPanel.setRow(null);
+		AddRowPanelListener<T> listener = new AddRowPanelListener<T>(this,
+				eventBus);
+		AcceptCancelPanel panel = new AcceptCancelPanel(
+				rowEditionPanel.getComponent(), listener,
+				factory.getIcon("accept.png"), factory.getIcon("cancel.png"));
+		rootPanel.add(panel, Tab.ADD.toString());
 
 		// Create toolbar
 		toolbar = new JPanel();
@@ -173,8 +179,13 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 	public void selectUpdateTab() throws DataHandlerException {
 		UpdateRowPanelListener<T> listener = new UpdateRowPanelListener<T>(
 				this, eventBus);
-		AcceptCancelPanel updatePanel = createUpdatePanel(listener,
-				localDataPanel.getDataSource().getRowById(getSelectedId()));
+		RowEditionPanel<T> rowEditionPanel = handler.getUpdatePanel();
+		rowEditionPanel.setRow(localDataPanel.getDataSource().getRowById(
+				getSelectedId()));
+		AcceptCancelPanel updatePanel = new AcceptCancelPanel(
+				rowEditionPanel.getComponent(), listener,
+				factory.getIcon("accept.png"), factory.getIcon("cancel.png"));
+
 		rootPanel.add(updatePanel, Tab.UPDATE.toString());
 		selectTab(Tab.UPDATE);
 	}
@@ -186,14 +197,6 @@ public class ArchivariumMainPanel<T extends Row> extends JPanel implements
 		all.setSelected(tab.equals(Tab.ALL));
 		update.setSelected(tab.equals(Tab.UPDATE));
 		update.setVisible(tab.equals(Tab.UPDATE));
-	}
-
-	private AcceptCancelPanel createUpdatePanel(
-			AcceptCancelPanel.Listener listener, T row) {
-		RowEditionPanel<T> rowEditionPanel = handler.getRowEditionPanel();
-		rowEditionPanel.setRow(row);
-		return new AcceptCancelPanel(rowEditionPanel.getComponent(), listener,
-				factory.getIcon("accept.png"), factory.getIcon("cancel.png"));
 	}
 
 	public void closeUpdateTab(RowEditionPanel<T> rowEditionPanel) {

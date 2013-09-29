@@ -3,19 +3,21 @@ package org.archivarium.data;
 import geomatico.events.EventBus;
 
 import java.awt.Desktop;
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import org.archivarium.Launcher;
+import org.archivarium.ArchivariumConfig;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
 import org.archivarium.events.ScoreAddedEvent;
 import org.archivarium.events.ScoreDeletedEvent;
 import org.archivarium.ui.ScoreEditionPanel;
+import org.archivarium.ui.UIFactory;
 import org.archivarium.ui.data.DataHandler;
 import org.archivarium.ui.data.DataHandlerException;
 import org.archivarium.ui.data.RowEditionPanel;
@@ -24,13 +26,22 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
 public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
-	private RowEditionPanel<ScoreRow> editPanel;
-
+	private RowEditionPanel<ScoreRow> updatePanel;
+	private RowEditionPanel<ScoreRow> addPanel;
 	private ScoreProvider provider;
+	private ScoreSchema schema;
 
 	@Inject
-	public ScoreProviderDataHandler(@Assisted ScoreProvider provider) {
+	private UIFactory factory;
+
+	@Inject
+	private ArchivariumConfig config;
+
+	@Inject
+	public ScoreProviderDataHandler(@Assisted ScoreProvider provider,
+			@Assisted ScoreSchema schema) {
 		this.provider = provider;
+		this.schema = schema;
 	}
 
 	@Inject
@@ -75,7 +86,7 @@ public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
 			try {
 				uri = new URL(url).toURI();
 			} catch (MalformedURLException e) {
-				uri = new URI("file://" + url);
+				uri = new File(url).toURI();
 			}
 		} catch (URISyntaxException e) {
 			throw new DataHandlerException(e);
@@ -108,7 +119,16 @@ public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
 	}
 
 	private Score updateScoreUrl(Score score) {
-		String root = Launcher.getScoreRootDirectory();
+		File rootDir = config.getScoreRootDir();
+		if (rootDir == null) {
+			return score;
+		}
+
+		String root = rootDir.getAbsolutePath();
+		if (!root.endsWith(File.separator)) {
+			root += File.separator;
+		}
+
 		String url = score.getURL();
 		if (url != null && url.startsWith(root)) {
 			score.setURL(url.replace(root, ""));
@@ -117,10 +137,23 @@ public class ScoreProviderDataHandler implements DataHandler<ScoreRow> {
 		return score;
 	}
 
-	public RowEditionPanel<ScoreRow> getRowEditionPanel() {
-		if (editPanel == null) {
-			this.editPanel = new ScoreEditionPanel();
+	@Override
+	public RowEditionPanel<ScoreRow> getAddPanel() {
+		if (addPanel == null) {
+			this.addPanel = new ScoreEditionPanel(schema, factory);
 		}
-		return editPanel;
+		return addPanel;
+	}
+
+	@Override
+	public RowEditionPanel<ScoreRow> getUpdatePanel() {
+		if (updatePanel == null) {
+			this.updatePanel = new ScoreEditionPanel(schema, factory);
+		}
+		return updatePanel;
+	}
+
+	public static void main(String[] args) {
+		System.out.println(new File("C:\\Prueba\\una prueba.pdf").toURI());
 	}
 }

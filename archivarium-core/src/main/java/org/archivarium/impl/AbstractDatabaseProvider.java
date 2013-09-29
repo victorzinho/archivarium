@@ -30,15 +30,19 @@ public abstract class AbstractDatabaseProvider implements ScoreProvider {
 	private static final Logger logger = Logger
 			.getLogger(AbstractDatabaseProvider.class);
 
-	private static final String COLUMN_NAME_NAME = "name";
-	private static final String COLUMN_NAME_AUTHOR = "author";
+	private static final String COLUMN_NAME_TITLE = "title";
+	private static final String COLUMN_NAME_COMPOSER = "composer";
 	private static final String COLUMN_NAME_DESCRIPTION = "description";
 	private static final String COLUMN_NAME_INSTRUMENTS = "instruments";
 	private static final String COLUMN_NAME_EDITION = "edition";
+	private static final String COLUMN_NAME_ARRANGEMENT = "arrangement";
+	private static final String COLUMN_NAME_ORIGIN = "origin";
 	private static final String COLUMN_NAME_URL = "url";
 	private static final String COLUMN_NAME_FORMAT = "format";
 	private static final String COLUMN_NAME_LOCATION = "location";
 	private static final String COLUMN_NAME_GENRE = "genre";
+	private static final String COLUMN_NAME_LYRICS = "lyrics";
+	private static final String COLUMN_NAME_LANGUAGE = "language";
 
 	private static final String PERSISTENCE_UNIT_NAME = "org.archivarium";
 	private static final String HIBERNATE_PROP_URL = "hibernate.connection.url";
@@ -129,13 +133,17 @@ public abstract class AbstractDatabaseProvider implements ScoreProvider {
 		criteria = criteria.distinct(true);
 
 		List<Predicate> predicates = new ArrayList<Predicate>();
-		updatePredicates(model.getName(), COLUMN_NAME_NAME, predicates,
+		updatePredicates(model.getTitle(), COLUMN_NAME_TITLE, predicates,
 				builder, from);
-		updatePredicates(model.getAuthor(), COLUMN_NAME_AUTHOR, predicates,
+		updatePredicates(model.getComposer(), COLUMN_NAME_COMPOSER, predicates,
 				builder, from);
 		updatePredicates(model.getDescription(), COLUMN_NAME_DESCRIPTION,
 				predicates, builder, from);
 		updatePredicates(model.getEdition(), COLUMN_NAME_EDITION, predicates,
+				builder, from);
+		updatePredicates(model.getArrangement(), COLUMN_NAME_ARRANGEMENT,
+				predicates, builder, from);
+		updatePredicates(model.getOrigin(), COLUMN_NAME_ORIGIN, predicates,
 				builder, from);
 		updatePredicates(model.getURL(), COLUMN_NAME_URL, predicates, builder,
 				from);
@@ -144,6 +152,10 @@ public abstract class AbstractDatabaseProvider implements ScoreProvider {
 		updatePredicates(model.getLocation(), COLUMN_NAME_LOCATION, predicates,
 				builder, from);
 		updatePredicates(model.getGenre(), COLUMN_NAME_GENRE, predicates,
+				builder, from);
+		updatePredicates(model.getLyrics(), COLUMN_NAME_LYRICS, predicates,
+				builder, from);
+		updatePredicates(model.getLanguage(), COLUMN_NAME_LANGUAGE, predicates,
 				builder, from);
 
 		if (model.getInstruments() != null) {

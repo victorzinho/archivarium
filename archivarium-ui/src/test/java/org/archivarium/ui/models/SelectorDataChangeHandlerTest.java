@@ -3,6 +3,7 @@ package org.archivarium.ui.models;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -47,7 +48,7 @@ public class SelectorDataChangeHandlerTest {
 		when(model.getValues()).thenReturn(values);
 
 		DataSource<?> source = mock(DataSource.class);
-		when(source.getUniqueValues()).thenReturn(new String[][] { values });
+		when(source.getUniqueValues(anyInt())).thenReturn(values);
 
 		SelectorDataChangeHandler handler = new SelectorDataChangeHandler(
 				model, source, table, 0);
@@ -64,15 +65,14 @@ public class SelectorDataChangeHandlerTest {
 
 		// Mock source
 		DataSource<?> source = mock(DataSource.class);
-		when(source.getUniqueValues())
-				.thenReturn(new String[][] { prevValues });
+		when(source.getUniqueValues(anyInt())).thenReturn(prevValues);
 
 		// Create table and model from source
 		SelectorTableModel model = new SelectorTableModel(source, 0, messages);
 		JTable table = new JTable(model);
 
 		// Modify source
-		when(source.getUniqueValues()).thenReturn(new String[][] { newValues });
+		when(source.getUniqueValues(anyInt())).thenReturn(newValues);
 
 		// Notify modification
 		SelectorDataChangeHandler handler = new SelectorDataChangeHandler(
@@ -116,8 +116,7 @@ public class SelectorDataChangeHandlerTest {
 			int selectionIndex) throws Exception {
 		// Mock source
 		DataSource<?> source = mock(DataSource.class);
-		when(source.getUniqueValues())
-				.thenReturn(new String[][] { prevValues });
+		when(source.getUniqueValues(anyInt())).thenReturn(prevValues);
 
 		// Create table and model from source
 		model = new SelectorTableModel(source, 0, messages);
@@ -127,7 +126,7 @@ public class SelectorDataChangeHandlerTest {
 				selectionIndex);
 
 		// Modify source
-		when(source.getUniqueValues()).thenReturn(new String[][] { newValues });
+		when(source.getUniqueValues(anyInt())).thenReturn(newValues);
 
 		// Notify modification
 		SelectorDataChangeHandler handler = new SelectorDataChangeHandler(

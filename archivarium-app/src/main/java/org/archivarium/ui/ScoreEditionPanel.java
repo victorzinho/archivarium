@@ -3,41 +3,46 @@ package org.archivarium.ui;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.File;
 
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.archivarium.Score;
 import org.archivarium.data.ScoreRow;
+import org.archivarium.data.ScoreSchema;
 import org.archivarium.impl.DefaultScore;
 import org.archivarium.ui.data.RowEditionPanel;
 
 public class ScoreEditionPanel extends JPanel implements
-		RowEditionPanel<ScoreRow> {
+		RowEditionPanel<ScoreRow>, ChangeListener {
 	private ScoreRow row;
 
-	private JTextField name, author, description, instruments, edition, format,
-			location, genre;
+	private JTextField[] fields;
 	private FileField url;
+	private JTextField format;
 
-	public ScoreEditionPanel() {
+	private ScoreSchema schema;
+	private UIFactory factory;
+
+	public ScoreEditionPanel(ScoreSchema schema, UIFactory factory) {
+		this.schema = schema;
+		this.factory = factory;
+
 		setLayout(new GridBagLayout());
 
 		// Create fields
-		name = new JTextField();
-		author = new JTextField();
-		description = new JTextField();
-		instruments = new JTextField();
-		edition = new JTextField();
-		url = new FileField(JFileChooser.FILES_ONLY);
+		fields = new JTextField[schema.getFieldCount()];
+		for (int i = 0; i < fields.length; i++) {
+			fields[i] = new JTextField();
+		}
+		url = new FileField(JFileChooser.FILES_ONLY, this);
 		format = new JTextField();
-		location = new JTextField();
-		genre = new JTextField();
 
 		GridBagConstraints c = new GridBagConstraints();
 		c.insets = new Insets(5, 5, 5, 5);
@@ -47,48 +52,32 @@ public class ScoreEditionPanel extends JPanel implements
 		c.weightx = 0;
 		c.ipadx = 5;
 		c.ipady = 5;
-
-		// Labels
 		c.anchor = GridBagConstraints.EAST;
-		add(new JLabel("Name: "), c);
-		c.gridy++;
-		add(new JLabel("Author: "), c);
-		c.gridy++;
-		add(new JLabel("Description: "), c);
-		c.gridy++;
-		add(new JLabel("Instruments: "), c);
-		c.gridy++;
-		add(new JLabel("Edition: "), c);
-		c.gridy++;
+
+		for (int i = 0; i < fields.length; i++) {
+			c.gridx = 0;
+			c.weightx = 0;
+			add(new JLabel(schema.getFieldName(i) + ": "), c);
+			c.gridx = 1;
+			c.weightx = 1;
+			add(fields[i], c);
+			c.gridy++;
+		}
+
+		c.gridx = 0;
+		c.weightx = 0;
 		add(new JLabel("URL: "), c);
+		c.gridx++;
+		c.weightx = 1;
+		add(url, c);
+
+		c.gridx = 0;
+		c.weightx = 0;
 		c.gridy++;
 		add(new JLabel("Format: "), c);
-		c.gridy++;
-		add(new JLabel("Location"), c);
-		c.gridy++;
-		add(new JLabel("Genre: "), c);
-
-		// Fields
-		c.gridy = 0;
-		c.gridx = 1;
+		c.gridx++;
 		c.weightx = 1;
-		add(name, c);
-		c.gridy++;
-		add(author, c);
-		c.gridy++;
-		add(description, c);
-		c.gridy++;
-		add(instruments, c);
-		c.gridy++;
-		add(edition, c);
-		c.gridy++;
-		add(url, c);
-		c.gridy++;
 		add(format, c);
-		c.gridy++;
-		add(location, c);
-		c.gridy++;
-		add(genre, c);
 
 		// Fill
 		c.gridy++;
@@ -101,27 +90,22 @@ public class ScoreEditionPanel extends JPanel implements
 	@Override
 	public void setRow(ScoreRow row) {
 		this.row = row;
-
 		if (row == null) {
-			name.setText("");
-			author.setText("");
-			description.setText("");
-			edition.setText("");
+			for (int i = 0; i < schema.getFieldCount(); i++) {
+				fields[i].setText("");
+			}
 			url.setFile(null);
 			format.setText("");
-			location.setText("");
-			genre.setText("");
 		} else {
 			Score score = row.getScore();
-			name.setText(score.getName());
-			author.setText(score.getAuthor());
-			description.setText(score.getDescription());
-			edition.setText(score.getEdition());
+
+			for (int i = 0; i < schema.getFieldCount(); i++) {
+				Object data = schema.getValue(score, i);
+				fields[i].setText(data == null ? "" : data.toString());
+			}
 			url.setFile(score.getURL());
 			format.setText(score.getFormat());
-			location.setText(score.getLocation());
-			genre.setText(score.getGenre());
-			instruments.setText(row.getInstrumentsString());
+			updateFormatField();
 		}
 	}
 
@@ -132,24 +116,42 @@ public class ScoreEditionPanel extends JPanel implements
 
 	@Override
 	public ScoreRow getRow() {
-		if (row == null) {
-			row = new ScoreRow(new DefaultScore());
+		String[] values = new String[fields.length];
+		for (int i = 0; i < values.length; i++) {
+			values[i] = fields[i].getText().trim();
 		}
-		row.getScore().setName(name.getText().trim());
-		row.getScore().setAuthor(author.getText().trim());
-		row.getScore().setDescription(description.getText().trim());
-		row.getScore().setEdition(edition.getText().trim());
-		row.getScore().setURL(url.getFile().getAbsolutePath());
-		row.getScore().setFormat(format.getText().trim());
-		row.getScore().setLocation(location.getText().trim());
-		row.getScore().setGenre(genre.getText().trim());
 
-		List<String> instrumentList = new ArrayList<String>();
-		String[] s = this.instruments.getText().split(",");
-		for (String instrument : s) {
-			instrumentList.add(instrument.trim());
+		if (row == null) {
+			row = new ScoreRow(factory, new DefaultScore(), schema);
 		}
-		row.getScore().setInstruments(instrumentList);
+
+		schema.updateScore(row.getScore(), values);
+		File file = url.getFile();
+		if (file != null) {
+			String path = file.getAbsolutePath();
+			row.getScore().setURL(path);
+			row.getScore().setFormat(path.substring(path.lastIndexOf('.') + 1));
+		} else {
+			row.getScore().setURL(null);
+			row.getScore().setFormat(null);
+		}
 		return row;
+	}
+
+	@Override
+	public void stateChanged(ChangeEvent e) {
+		updateFormatField();
+	}
+
+	private void updateFormatField() {
+		File file = url.getFile();
+		boolean hasExtension = file != null && file.getName().contains(".");
+		format.setEditable(!hasExtension);
+		format.setEnabled(!hasExtension);
+
+		if (hasExtension) {
+			String name = file.getName();
+			format.setText(name.substring(name.lastIndexOf('.') + 1));
+		}
 	}
 }

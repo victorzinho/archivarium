@@ -4,6 +4,7 @@ import geomatico.events.EventBus;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -12,6 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 
 import org.archivarium.ui.UIFactory;
@@ -23,15 +25,17 @@ import org.archivarium.ui.events.DataChangeEvent;
 import org.archivarium.ui.listeners.ShowPopupListener;
 import org.archivarium.ui.models.MainTableModel;
 import org.jdesktop.swingx.JXMultiSplitPane;
+import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.MultiSplitLayout.Divider;
 import org.jdesktop.swingx.MultiSplitLayout.Leaf;
 import org.jdesktop.swingx.MultiSplitLayout.Node;
 import org.jdesktop.swingx.MultiSplitLayout.Split;
+import org.jdesktop.swingx.decorator.HighlighterFactory;
 
 public class LocalDataPanel<T extends Row> extends JPanel {
 	private static final String MAIN_PANE = "main";
 
-	private JTable table;
+	private JXTable table;
 	private DataSource<T> source;
 
 	public LocalDataPanel(DataSource<T> source, DataHandler<T> handler,
@@ -62,25 +66,44 @@ public class LocalDataPanel<T extends Row> extends JPanel {
 		// Create main table
 		MainTableModel model = new MainTableModel(source);
 		eventBus.addHandler(DataChangeEvent.class, model);
-		table = new JTable(model);
+		table = new JXTable(model) {
+			public boolean getScrollableTracksViewportWidth() {
+				return getPreferredSize().width < getParent().getWidth();
+			}
+		};
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		table.getTableHeader().setReorderingAllowed(false);
 		table.setShowGrid(false);
 		table.setIntercellSpacing(new Dimension(0, 0));
-		table.setDefaultRenderer(Object.class, factory.getTableCellRenderer());
 		table.setFocusable(false);
 		table.setRowHeight(35);
 		table.setAutoCreateRowSorter(true);
+		table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		table.setHorizontalScrollEnabled(true);
+		table.setSelectionBackground(factory.getSelectionBackground());
+		table.setSelectionForeground(factory.getSelectionForeground());
+		table.setForeground(factory.getForeground());
+		table.setHighlighters(HighlighterFactory.createAlternateStriping(
+				factory.getBackground(), factory.getBackgroundAlternate()));
+		table.putClientProperty(JXTable.USE_DTCR_COLORMEMORY_HACK, null);
+		adjustTableColumns(table);
 
 		table.addMouseListener(new ShowPopupListener<T>(table, mainPanel,
 				factory, eventBus));
-		doSetColumnFixedWidth(MainTableModel.COLUMN_ID, 0);
+
+		TableColumn tableColumn = table.getColumnModel().getColumn(
+				MainTableModel.COLUMN_ID);
+		tableColumn.setMinWidth(0);
+		tableColumn.setMaxWidth(0);
+		tableColumn.setPreferredWidth(0);
+		tableColumn.setWidth(0);
 
 		// Main pane
 		Leaf mainPane = new Leaf(MAIN_PANE);
 		mainPane.setWeight(1.0);
 
-		JScrollPane mainScroll = new JScrollPane(table);
+		JScrollPane mainScroll = new JScrollPane(table,
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		mainScroll.getViewport().setBackground(Color.white);
 
 		Split mainSplit = new Split(selectorsSplit, new Divider(), mainPane);
@@ -101,17 +124,33 @@ public class LocalDataPanel<T extends Row> extends JPanel {
 		add(splitPane, BorderLayout.CENTER);
 	}
 
-	public void setColumnFixedWidth(int column, int width) {
-		// + 1 for ID column
-		doSetColumnFixedWidth(column + 1, width);
+	private void adjustTableColumns(JTable table) {
+		for (int i = 0; i < table.getColumnCount(); i++) {
+			TableColumn column = table.getColumnModel().getColumn(i);
+
+			TableCellRenderer renderer = column.getHeaderRenderer();
+			if (renderer == null) {
+				renderer = table.getTableHeader().getDefaultRenderer();
+			}
+
+			Component c = renderer.getTableCellRendererComponent(table,
+					column.getHeaderValue(), false, false, 0, 0);
+			int width = c.getPreferredSize().width;
+
+			for (int j = 1; j < table.getRowCount(); j++) {
+				renderer = table.getCellRenderer(j, i);
+				c = renderer.getTableCellRendererComponent(table,
+						table.getValueAt(j, i), false, false, j, i);
+				width = Math.max(width, c.getPreferredSize().width);
+			}
+
+			width += 30;
+			column.setPreferredWidth(width);
+		}
 	}
 
-	private void doSetColumnFixedWidth(int column, int width) {
-		TableColumn tableColumn = table.getColumnModel().getColumn(column);
-		tableColumn.setMinWidth(width);
-		tableColumn.setMaxWidth(width);
-		tableColumn.setPreferredWidth(width);
-		tableColumn.setWidth(width);
+	public TableColumn getColumn(int column) {
+		return table.getColumnModel().getColumn(column + 1);
 	}
 
 	public JTable getTable() {

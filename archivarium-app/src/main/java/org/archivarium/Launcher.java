@@ -27,10 +27,6 @@ import com.google.inject.Injector;
 public class Launcher implements Runnable {
 	private static final Logger logger = Logger.getLogger(Launcher.class);
 
-	public static final String DATABASE = "archivarium.db";
-	public static final String BACKUP_DIR = "archivarium.backup_dir";
-	public static final String SCORE_ROOT = "archivarium.scores.root_dir";
-
 	private static Injector injector;
 
 	public static void main(String[] args) throws InvocationTargetException,
@@ -38,6 +34,7 @@ public class Launcher implements Runnable {
 		Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 			@Override
 			public void uncaughtException(Thread t, Throwable e) {
+				logger.fatal("Uncaught exception", e);
 				JOptionPane.showMessageDialog(null, "ERROR!!!");
 			}
 		});
@@ -53,6 +50,9 @@ public class Launcher implements Runnable {
 	private EventBus eventBus;
 
 	@Inject
+	private ArchivariumConfig config;
+
+	@Inject
 	private ResourceBundle messages;
 
 	@Override
@@ -63,7 +63,7 @@ public class Launcher implements Runnable {
 		try {
 			backup();
 			frame = injector.getInstance(ArchivariumFrame.class);
-			frame.launch();
+			frame.launch(config.getFields(), config.getSelectors());
 		} catch (Exception e) {
 			eventBus.fireEvent(new ExceptionEvent(Severity.ERROR, e
 					.getMessage(), e));
@@ -71,12 +71,12 @@ public class Launcher implements Runnable {
 	}
 
 	private void backup() throws SQLException {
-		File database = new File(DATABASE).getAbsoluteFile();
+		File database = new File(config.getDatabase()).getAbsoluteFile();
 
 		File older = null;
 		File f = null;
 		for (int i = 0; i < 10; i++) {
-			f = new File(BACKUP_DIR, "archivarium." + i + ".zip");
+			f = new File(config.getBackupDir(), "archivarium." + i + ".zip");
 			if (!f.exists()) {
 				break;
 			}
@@ -138,13 +138,5 @@ public class Launcher implements Runnable {
 		};
 
 		eventBus.addHandler(ExceptionEvent.class, exceptionHandler);
-	}
-
-	public static String getDatabase() {
-		return System.getProperty(DATABASE);
-	}
-
-	public static String getScoreRootDirectory() {
-		return System.getProperty(SCORE_ROOT);
 	}
 }

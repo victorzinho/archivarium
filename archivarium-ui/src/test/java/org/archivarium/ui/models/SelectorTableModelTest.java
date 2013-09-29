@@ -2,6 +2,7 @@ package org.archivarium.ui.models;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +44,8 @@ public class SelectorTableModelTest {
 			when(source.getColumnName(i)).thenReturn(COLUMNS[i]);
 		}
 		when(source.getRows()).thenReturn(data);
-		when(source.getUniqueValues()).thenReturn(
-				new String[][] { { "string", "another string" }, {} });
+		when(source.getUniqueValues(anyInt())).thenReturn(
+				new String[] { "string", "another string" });
 
 		index = 0;
 		messages = ResourceBundle.getBundle("archivarium");

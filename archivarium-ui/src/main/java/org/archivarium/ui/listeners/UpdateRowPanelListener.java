@@ -14,7 +14,7 @@ public class UpdateRowPanelListener<T extends Row> implements
 		AcceptCancelPanel.Listener {
 
 	private DataHandler<T> handler;
-	private RowEditionPanel<T> editPanel;
+	private RowEditionPanel<T> updatePanel;
 	private ArchivariumMainPanel<T> mainPanel;
 	private EventBus eventBus;
 
@@ -22,15 +22,15 @@ public class UpdateRowPanelListener<T extends Row> implements
 			EventBus eventBus) {
 		this.mainPanel = mainPanel;
 		this.handler = mainPanel.getDataHandler();
-		this.editPanel = handler.getRowEditionPanel();
+		this.updatePanel = handler.getUpdatePanel();
 		this.eventBus = eventBus;
 	}
 
 	@Override
 	public void accept() {
 		try {
-			handler.update(editPanel.getRow());
-			mainPanel.closeUpdateTab(editPanel);
+			handler.update(updatePanel.getRow());
+			mainPanel.closeUpdateTab(updatePanel);
 		} catch (DataHandlerException exception) {
 			eventBus.fireEvent(new ExceptionEvent("cannot_update_score",
 					exception));
@@ -39,6 +39,6 @@ public class UpdateRowPanelListener<T extends Row> implements
 
 	@Override
 	public void cancel() {
-		mainPanel.closeUpdateTab(editPanel);
+		mainPanel.closeUpdateTab(updatePanel);
 	}
 }

@@ -6,6 +6,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -14,11 +15,11 @@ import static org.mockito.Mockito.when;
 import geomatico.events.EventBus;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
 import javax.inject.Inject;
 
-import org.archivarium.Launcher;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
@@ -28,7 +29,9 @@ import org.archivarium.events.ScoreDeletedEvent;
 import org.archivarium.events.ScoreDeletedHandler;
 import org.archivarium.impl.DefaultScore;
 import org.archivarium.inject.ScoreDataFactory;
+import org.archivarium.ui.UIFactory;
 import org.archivarium.ui.data.DataHandlerException;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
@@ -41,6 +44,18 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 	@Inject
 	private EventBus bus;
 
+	@Inject
+	private UIFactory uiFactory;
+
+	private ScoreSchema schema;
+
+	@Before
+	@Override
+	public void setUp() throws Exception {
+		super.setUp();
+		schema = new ScoreSchema(new int[] { 0, 1, 2, 3, 4, 5, 6, 7 });
+	}
+
 	@Test
 	public void openProviderException() throws Exception {
 		ScoreProvider provider = mock(ScoreProvider.class);
@@ -48,7 +63,7 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 				mock(ScoreProviderException.class));
 
 		try {
-			factory.createHandler(provider).open(0);
+			factory.createHandler(provider, schema).open(0);
 			fail();
 		} catch (DataHandlerException e) {
 			// do nothing
@@ -67,8 +82,11 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 
 	@Test
 	public void openNonExisting() throws Exception {
+		ScoreProviderDataHandler handler = mockHandlerForOpen("file:///tmp/non_existing");
+		doThrow(IOException.class).when(handler).doOpen(any(URI.class));
+
 		try {
-			mockHandlerForOpen("file:///tmp/non_existing").open(0);
+			handler.open(0);
 			fail();
 		} catch (DataHandlerException e) {
 			// do nothing
@@ -77,34 +95,17 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 
 	@Test
 	public void openRelativePath() throws Exception {
-		File file = new File("test_file.archivarium");
+		File file = new File("non_existing_file");
 		file.createNewFile();
-
-		try {
-			mockHandlerForOpen(file.getPath()).open(0);
-			fail();
-		} catch (DataHandlerException e) {
-			// do nothing
-		}
-
+		mockHandlerForOpen(file.getPath()).open(0);
 		file.delete();
 	}
 
 	@Test
 	public void openAbsolutePath() throws Exception {
 		File file = File.createTempFile("archivarium", ".txt");
-
 		ScoreProviderDataHandler handler = mockHandlerForOpen(file
 				.getAbsolutePath());
-
-		// We override the doOpen method to avoid the opening of the empty files
-		// while testing
-		doAnswer(new Answer<Void>() {
-			@Override
-			public Void answer(InvocationOnMock invocation) throws Throwable {
-				return null;
-			}
-		}).when(handler).doOpen(any(URI.class));
 		handler.open(0);
 		file.delete();
 	}
@@ -112,20 +113,9 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 	@Test
 	public void openValidURI() throws Exception {
 		File file = File.createTempFile("archivarium", ".txt");
-
-		ScoreProviderDataHandler handler = mockHandlerForOpen("file://"
-				+ file.getAbsolutePath());
-
-		// We override the doOpen method to avoid the opening of the empty files
-		// while testing
-		doAnswer(new Answer<Void>() {
-			@Override
-			public Void answer(InvocationOnMock invocation) throws Throwable {
-				return null;
-			}
-		}).when(handler).doOpen(any(URI.class));
+		ScoreProviderDataHandler handler = mockHandlerForOpen(file.toURI()
+				.toASCIIString());
 		handler.open(0);
-
 		file.delete();
 	}
 
@@ -139,7 +129,7 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 				mock(ScoreProviderException.class));
 
 		try {
-			factory.createHandler(provider).delete(0);
+			factory.createHandler(provider, schema).delete(0);
 			fail();
 		} catch (DataHandlerException e) {
 			// do nothing
@@ -157,7 +147,7 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
-		factory.createHandler(provider).delete(0);
+		factory.createHandler(provider, schema).delete(0);
 
 		verify(eventHandler).deleted(same(score));
 		verify(provider).deleteScore(same(score));
@@ -170,7 +160,8 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 
 		Score score = mock(Score.class);
 		ScoreProvider provider = mock(ScoreProvider.class);
-		factory.createHandler(provider).add(new ScoreRow(score));
+		factory.createHandler(provider, schema).add(
+				new ScoreRow(uiFactory, score, schema));
 
 		verify(eventHandler).added(same(score));
 		verify(provider).addScore(same(score));
@@ -180,7 +171,8 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 	public void update() throws Exception {
 		Score score = mock(Score.class);
 		ScoreProvider provider = mock(ScoreProvider.class);
-		factory.createHandler(provider).update(new ScoreRow(score));
+		factory.createHandler(provider, schema).update(
+				new ScoreRow(uiFactory, score, schema));
 		verify(provider).modifyScore(same(score));
 	}
 
@@ -195,20 +187,25 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 	}
 
 	private void testScoreInRootDirectory(String action) throws Exception {
-		System.setProperty(Launcher.SCORE_ROOT, "/tmp/");
+		File tmp = File.createTempFile("archivarium", "");
+		tmp.delete();
+		when(config.getScoreRootDir()).thenReturn(tmp.getParentFile());
 
 		String scoreName = "score.pdf";
 		Score score = new DefaultScore();
-		score.setURL(Launcher.getScoreRootDirectory() + scoreName);
+		score.setURL(new File(config.getScoreRootDir(), scoreName)
+				.getAbsolutePath());
 		ScoreProvider provider = mock(ScoreProvider.class);
 
 		ArgumentCaptor<Score> arg = ArgumentCaptor.forClass(Score.class);
 
 		if (action.equals("add")) {
-			factory.createHandler(provider).add(new ScoreRow(score));
+			factory.createHandler(provider, schema).add(
+					new ScoreRow(uiFactory, score, schema));
 			verify(provider).addScore(arg.capture());
 		} else {
-			factory.createHandler(provider).update(new ScoreRow(score));
+			factory.createHandler(provider, schema).update(
+					new ScoreRow(uiFactory, score, schema));
 			verify(provider).modifyScore(arg.capture());
 		}
 
@@ -223,6 +220,17 @@ public class ScoreProviderDataHandlerTest extends AbstractArchivariumTest {
 		ScoreProvider provider = mock(ScoreProvider.class);
 		when(provider.getScoreById(anyInt())).thenReturn(score);
 
-		return spy(factory.createHandler(provider));
+		ScoreProviderDataHandler handler = spy(factory.createHandler(provider,
+				schema));
+
+		// We override the doOpen method to avoid the opening of the empty files
+		// while testing
+		doAnswer(new Answer<Void>() {
+			@Override
+			public Void answer(InvocationOnMock invocation) throws Throwable {
+				return null;
+			}
+		}).when(handler).doOpen(any(URI.class));
+		return handler;
 	}
 }

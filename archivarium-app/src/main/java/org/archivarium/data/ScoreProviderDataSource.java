@@ -3,18 +3,17 @@ package org.archivarium.data;
 import geomatico.events.EventBus;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javax.swing.ImageIcon;
 
-import org.archivarium.Launcher;
+import org.archivarium.ArchivariumConfig;
 import org.archivarium.Score;
 import org.archivarium.ScoreProvider;
 import org.archivarium.ScoreProviderException;
-import org.archivarium.impl.DefaultScore;
+import org.archivarium.ui.UIFactory;
 import org.archivarium.ui.data.DataHandlerException;
 import org.archivarium.ui.data.DataSource;
 import org.archivarium.ui.events.DataChangeEvent;
@@ -38,47 +37,51 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 
 	private String[][] uniqueValues;
 
+	@Inject
 	private EventBus eventBus;
+	@Inject
+	private UIFactory uiFactory;
+
+	@Inject
+	private ArchivariumConfig config;
+
 	private ScoreProvider provider;
+	private ScoreSchema schema;
 
 	@Inject
 	public ScoreProviderDataSource(@Assisted ScoreProvider provider,
-			EventBus eventBus) throws ScoreProviderException {
+			@Assisted ScoreSchema schema) {
 		this.provider = provider;
-		this.criteria = new String[ScoreRow.COLUMNS.length];
-		this.text = null;
-		this.uniqueValues = new String[ScoreRow.COLUMNS.length][];
-		this.eventBus = eventBus;
-		update();
+		this.schema = schema;
+
+		this.criteria = new String[schema.getFieldCount()];
+		this.uniqueValues = new String[schema.getFieldCount()][];
 	}
 
 	@Override
 	public int getColumnCount() {
-		return ScoreRow.COLUMNS.length;
+		// +1 for the icon column
+		return schema.getFieldCount() + 1;
 	}
 
 	@Override
 	public String getColumnName(int column) throws IllegalArgumentException {
-		if (column < 0 || column >= ScoreRow.COLUMNS.length) {
-			throw new IllegalArgumentException("Invalid column index: "
-					+ column);
-		}
-
-		return ScoreRow.COLUMNS[column];
+		return (column == 0) ? "" : schema.getFieldName(column - 1);
 	}
 
 	@Override
 	public ScoreRow getRowById(int id) throws DataHandlerException {
 		try {
-			return new ScoreRow(provider.getScoreById(id));
+			return new ScoreRow(uiFactory, provider.getScoreById(id), schema);
 		} catch (ScoreProviderException e) {
 			throw new DataHandlerException(e);
 		}
 	}
 
 	@Override
-	public String[][] getUniqueValues() {
-		return uniqueValues;
+	public String[] getUniqueValues(int column) {
+		// -1 for the icon column
+		return uniqueValues[column - 1];
 	}
 
 	@Override
@@ -109,19 +112,7 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 
 		// Update 'scores', which contains all scores matching the criteria
 		if (hasCriteria) {
-			Score model = new DefaultScore();
-			model.setName(criteria[ScoreRow.COLUMN_INDEX_NAME]);
-			model.setAuthor(criteria[ScoreRow.COLUMN_INDEX_AUTHOR]);
-			model.setDescription(criteria[ScoreRow.COLUMN_INDEX_DESCRIPTION]);
-			String instruments = criteria[ScoreRow.COLUMN_INDEX_INSTRUMENTS];
-			if (instruments != null) {
-				model.setInstruments(Arrays.asList(instruments.split(", ")));
-			}
-			model.setEdition(criteria[ScoreRow.COLUMN_INDEX_EDITION]);
-			model.setLocation(criteria[ScoreRow.COLUMN_INDEX_LOCATION]);
-			model.setGenre(criteria[ScoreRow.COLUMN_INDEX_GENRE]);
-
-			this.scores = provider.search(model, true);
+			this.scores = provider.search(schema.createScore(criteria), true);
 		} else {
 			this.scores = provider.getScores();
 		}
@@ -129,21 +120,21 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 		// Update relative URLs
 		for (Score score : this.scores) {
 			String url = score.getURL();
-			if (!new File(url).isAbsolute()) {
-				String newUrl = Launcher.getScoreRootDirectory()
-						+ File.separator + url;
+			if (url != null && !new File(url).isAbsolute()) {
+				String newUrl = new File(config.getScoreRootDir(), url)
+						.getAbsolutePath();
 				score.setURL(newUrl);
 			}
 		}
 
 		// Update 'filtered', which contains only the 'scores' that
 		// contain the text in any field
-		this.filtered = new ScoreFilter(text).filter(this.scores);
+		this.filtered = filter(this.scores);
 
 		// Update 'rows' from 'filtered'
 		this.rows = new ScoreRow[filtered.size()];
 		for (int i = 0; i < rows.length; i++) {
-			rows[i] = new ScoreRow(filtered.get(i));
+			rows[i] = new ScoreRow(uiFactory, filtered.get(i), schema);
 		}
 
 		// Update unique values
@@ -162,10 +153,14 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 			}
 		}
 
-		ScoreFilter filter = new ScoreFilter(text);
-		List<Score> allScoresFiltered = filter.filter(provider.getScores());
-
+		List<Score> allScoresFiltered = filter(provider.getScores());
 		for (int i = 0; i < uniqueValues.length; i++) {
+			// We don't update the unique values for the column
+			// that fired the change
+			if (i == column) {
+				continue;
+			}
+
 			List<Score> scores;
 			// If we have only one criterion, we get the unique values for all
 			// available scores, not only the ones we filtered
@@ -175,37 +170,56 @@ public class ScoreProviderDataSource implements DataSource<ScoreRow> {
 				scores = this.filtered;
 			}
 
-			Set<String> set = new HashSet<String>();
+			List<String> list = new ArrayList<String>();
 			for (Score score : scores) {
-				String value = ScoreRow.getString(score, i);
-				if (value != null && value.length() > 0) {
-					set.add(value);
+				Object value = schema.getValue(score, i);
+				if (value == null) {
+					continue;
+				}
+
+				String string = value.toString();
+				if (string.length() > 0 && !list.contains(string)) {
+					list.add(string);
 				}
 			}
 
-			// We don't update the unique values for the column
-			// that fired the change
-			if (i != column) {
-				uniqueValues[i] = set.toArray(new String[set.size()]);
+			Collections.sort(list);
+			uniqueValues[i] = list.toArray(new String[list.size()]);
+		}
+	}
+
+	private List<Score> filter(List<Score> scores) {
+		if (text == null || text.length() == 0) {
+			return scores;
+		}
+
+		List<Score> ret = new ArrayList<Score>();
+		for (Score score : scores) {
+			if (schema.matches(score, text)) {
+				ret.add(score);
 			}
 		}
+		return ret;
 	}
 
 	public void setCategory(String category, int column)
 			throws ScoreProviderException {
+		// -1 for the icon column
+		int col = column - 1;
+
 		// Previous and new category are null
-		if (criteria[column] == null && category == null) {
+		if (criteria[col] == null && category == null) {
 			return;
 		}
 
 		// Previous and new category are the same
-		if (criteria[column] != null && category != null
-				&& criteria[column].equals(category)) {
+		if (criteria[col] != null && category != null
+				&& criteria[col].equals(category)) {
 			return;
 		}
 
-		this.criteria[column] = category;
-		update(column);
+		this.criteria[col] = category;
+		update(col);
 	}
 
 	public void setText(String text) throws ScoreProviderException {

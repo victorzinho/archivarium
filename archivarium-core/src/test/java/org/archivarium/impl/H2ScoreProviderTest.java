@@ -23,20 +23,23 @@ import org.junit.Test;
 public class H2ScoreProviderTest {
 	@Before
 	public void setUp() throws Exception {
-		String url = "jdbc:h2:file:" + getDatabase("scores");
-		Connection connection = DriverManager.getConnection(url);
+		Connection connection = DriverManager.getConnection("jdbc:h2:file:"
+				+ getDatabase("scores"));
 		Statement statement = connection.createStatement();
+		execute("/create_db.sql", statement);
+		execute("init_db.sql", statement);
+		statement.close();
+		connection.close();
+	}
 
+	private void execute(String resource, Statement statement) throws Exception {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(
-				getClass().getResourceAsStream("init_db.sql")));
+				getClass().getResourceAsStream(resource)));
 		String line = reader.readLine();
 		while (line != null) {
 			statement.execute(line);
 			line = reader.readLine();
 		}
-
-		statement.close();
-		connection.close();
 	}
 
 	@Test
@@ -84,8 +87,8 @@ public class H2ScoreProviderTest {
 		assertEquals(2, scores.size());
 
 		Score score = scores.get(0);
-		assertEquals("Score 1", score.getName());
-		assertEquals("Author 1", score.getAuthor());
+		assertEquals("Score 1", score.getTitle());
+		assertEquals("Author 1", score.getComposer());
 		assertEquals("Score description", score.getDescription());
 		assertEquals("Custom edition", score.getEdition());
 		assertEquals(4, score.getInstruments().size());
@@ -103,7 +106,7 @@ public class H2ScoreProviderTest {
 	public void getScoreById() throws Exception {
 		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		Score score = provider.getScoreById(0);
-		assertEquals("Score 1", score.getName());
+		assertEquals("Score 1", score.getTitle());
 	}
 
 	@Test
@@ -112,9 +115,9 @@ public class H2ScoreProviderTest {
 		List<String> instruments = new ArrayList<String>();
 		instruments.add("Guitar");
 		DefaultScore score = new DefaultScore();
-		score.setName("Score 1");
+		score.setTitle("Score 1");
 		score.setDescription("Test score");
-		score.setAuthor("Author 1");
+		score.setComposer("Author 1");
 		score.setInstruments(instruments);
 		score.setFormat("pdf");
 		score.setURL("score.pdf");
@@ -123,8 +126,8 @@ public class H2ScoreProviderTest {
 		score = new DefaultScore();
 		instruments = new ArrayList<String>();
 		instruments.add("Piano");
-		score.setName("Score 1");
-		score.setAuthor("Anonymous");
+		score.setTitle("Score 1");
+		score.setComposer("Anonymous");
 		score.setInstruments(instruments);
 		score.setFormat("Paper");
 		score.setLocation("Desk drawer");
@@ -136,7 +139,7 @@ public class H2ScoreProviderTest {
 		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 		Score score = provider.getScores().get(0);
 		score.setDescription(null);
-		score.setName("Name changed");
+		score.setTitle("Name changed");
 
 		provider.modifyScore(score);
 
@@ -157,13 +160,13 @@ public class H2ScoreProviderTest {
 		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 
 		DefaultScore model = new DefaultScore();
-		model.setName("Score 1");
+		model.setTitle("Score 1");
 		List<Score> scores = provider.search(model, true);
 		assertEquals(1, scores.size());
-		assertEquals("Score 1", scores.get(0).getName());
+		assertEquals("Score 1", scores.get(0).getTitle());
 
 		model = new DefaultScore();
-		model.setName("Score ");
+		model.setTitle("Score ");
 		scores = provider.search(model, true);
 		assertEquals(0, scores.size());
 
@@ -173,7 +176,7 @@ public class H2ScoreProviderTest {
 		model.setInstruments(instruments);
 		scores = provider.search(model, true);
 		assertEquals(1, scores.size());
-		assertEquals("Score 1", scores.get(0).getName());
+		assertEquals("Score 1", scores.get(0).getTitle());
 
 		model = new DefaultScore();
 		instruments = new ArrayList<String>();
@@ -189,17 +192,17 @@ public class H2ScoreProviderTest {
 		H2ScoreProvider provider = new H2ScoreProvider(getDatabase("scores"));
 
 		DefaultScore model = new DefaultScore();
-		model.setName("Score 1");
+		model.setTitle("Score 1");
 		List<Score> scores = provider.search(model, false);
 		assertEquals(2, scores.size());
-		assertEquals("Score 1", scores.get(0).getName());
-		assertEquals("Score 2", scores.get(1).getName());
+		assertEquals("Score 1", scores.get(0).getTitle());
+		assertEquals("Score 2", scores.get(1).getTitle());
 
 		model = new DefaultScore();
 		model.setEdition("1992 editn");
 		scores = provider.search(model, false);
 		assertEquals(1, scores.size());
-		assertEquals("Score 2", scores.get(0).getName());
+		assertEquals("Score 2", scores.get(0).getTitle());
 
 		model = new DefaultScore();
 		List<String> instruments = new ArrayList<String>();
@@ -207,7 +210,7 @@ public class H2ScoreProviderTest {
 		model.setInstruments(instruments);
 		scores = provider.search(model, false);
 		assertEquals(1, scores.size());
-		assertEquals("Score 1", scores.get(0).getName());
+		assertEquals("Score 1", scores.get(0).getTitle());
 
 		model = new DefaultScore();
 		instruments = new ArrayList<String>();

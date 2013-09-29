@@ -47,9 +47,16 @@ public interface DataHandler<T extends Row> {
 	void open(int id) throws DataHandlerException;
 
 	/**
-	 * Returns the object with the necessary information to add/edit an element.
+	 * Returns the object with the necessary information to add an element.
 	 * 
 	 * @return The {@link RowEditionPanel} object
 	 */
-	RowEditionPanel<T> getRowEditionPanel();
+	RowEditionPanel<T> getAddPanel();
+
+	/**
+	 * Returns the object with the necessary information to add an element.
+	 * 
+	 * @return The {@link RowEditionPanel} object
+	 */
+	RowEditionPanel<T> getUpdatePanel();
 }

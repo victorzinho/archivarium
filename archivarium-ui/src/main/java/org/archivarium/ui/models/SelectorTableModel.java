@@ -17,7 +17,7 @@ public class SelectorTableModel extends AbstractTableModel {
 		super();
 
 		this.name = source.getColumnName(column);
-		this.values = source.getUniqueValues()[column];
+		this.values = source.getUniqueValues(column);
 		this.messages = messages;
 	}
 

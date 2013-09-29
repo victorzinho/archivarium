@@ -46,7 +46,7 @@ public class H2ScoreProvider extends AbstractDatabaseProvider {
 	private boolean alreadyExistsDB(String database) {
 		Connection connection = null;
 		try {
-			connection = DriverManager.getConnection(URL_PREFIX + database
+			connection = DriverManager.getConnection(getDatabaseUrl()
 					+ ";IFEXISTS=TRUE");
 			return true;
 		} catch (SQLException e) {
