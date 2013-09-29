@@ -2,5 +2,6 @@ target
 .classpath
 .project
 .settings
+scores.h2.db
 archivarium-app/backups
 archivarium-app/logs
