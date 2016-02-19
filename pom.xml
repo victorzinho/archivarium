@@ -17,14 +17,6 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
-	<repositories>
-		<repository>
-			<id>fergonco</id>
-			<name>fergonco repository</name>
-			<url>http://www.fergonco.es/maven-repo</url>
-		</repository>
-	</repositories>
-
 	<build>
 		<plugins> 
 			<plugin>
