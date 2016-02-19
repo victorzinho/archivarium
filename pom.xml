@@ -9,8 +9,8 @@
 
 	<modules>
 		<module>archivarium-core</module>
-		<module>archivarium-ui</module>
-		<module>archivarium-app</module>
+<!--		<module>archivarium-ui</module>-->
+<!--		<module>archivarium-app</module>-->
 	</modules>
 
 	<properties>
